@@ -33,5 +33,10 @@ jest-test-results.json
 .vscode/
 .idea/
 
+# Environment variables
+.env
+.env.local
+.env.*.local
+
 # Optional: if using TurboRepo or monorepo
 turbo/
