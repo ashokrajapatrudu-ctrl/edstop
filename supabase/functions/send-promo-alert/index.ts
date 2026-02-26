@@ -42,7 +42,7 @@ serve(async (req) => {
     const htmlBody = buildEmailHtml(alertType, promoCode, details);
 
     const resendPayload = {
-      from: "onboarding@resend.dev",
+      from: "alerts@edstop.com",
       to: adminEmails,
       subject,
       html: htmlBody,
