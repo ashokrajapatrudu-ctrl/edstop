@@ -48,7 +48,7 @@ export default function LoginPage() {
         setFullName('');
       } else {
         await signIn(email, password);
-        router.push('/dashboard');
+        router.push('/student-dashboard');
       }
     } catch (err: any) {
       setError(err.message || `Failed to ${isSignUp ? 'sign up' : 'sign in'}`);
