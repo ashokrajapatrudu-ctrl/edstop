@@ -305,6 +305,37 @@ const deliveredOrders = orders.filter(o => o.status === 'delivered');
 const totalSpent = deliveredOrders.reduce((sum, o) => sum + o.total, 0);
 const totalCashback = deliveredOrders.reduce((sum, o) => sum + (o.cashbackEarned || 0), 0);
 const deliveredCount = deliveredOrders.length;
+// Average Delivery Time (minutes)
+let totalDeliveryMinutes = 0;
+let deliverySamples = 0;
+
+orders.forEach(order => {
+  // only delivered + has estimated time
+  if (
+    order.status === 'delivered' &&
+    (order as any).estimatedDeliveryTime &&
+    order.date
+  ) {
+    try {
+      const created = new Date(
+        order.date.split('/').reverse().join('-') + ' ' + order.time
+      );
+      const delivered = new Date((order as any).estimatedDeliveryTime);
+
+      const diff = (delivered.getTime() - created.getTime()) / (1000 * 60);
+
+      if (!isNaN(diff) && diff > 0) {
+        totalDeliveryMinutes += diff;
+        deliverySamples++;
+      }
+    } catch {}
+  }
+});
+
+const avgDeliveryTime =
+  deliverySamples > 0
+    ? Math.round(totalDeliveryMinutes / deliverySamples)
+    : 0;
 // Order Type Distribution
 const foodCount = orders.filter(o => o.type === 'food' && o.status === 'delivered').length;
 const storeCount = orders.filter(o => o.type === 'dark-store' && o.status === 'delivered').length;
@@ -570,7 +601,7 @@ const monthlySpendData = Object.entries(monthlySpendMap)
   </div>
 </div>
         {/* Summary Stats */}
-        <div className="grid grid-cols-3 gap-3 mb-6 animate-slide-up">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6 animate-slide-up">
           <div className="glass-card rounded-2xl p-4 border border-white/10 text-center">
             <p className="text-2xl font-bold text-white">{deliveredCount}</p>
             <p className="text-xs text-white/50 mt-1">Orders Delivered</p>
@@ -583,6 +614,14 @@ const monthlySpendData = Object.entries(monthlySpendMap)
             <p className="text-2xl font-bold text-emerald-400">₹{totalCashback.toFixed(2)}</p>
             <p className="text-xs text-white/50 mt-1">EdCoins Earned</p>
           </div>
+          <div className="glass-card rounded-2xl p-4 border border-indigo-500/20 text-center">
+  <p className="text-2xl font-bold text-indigo-400">
+    {avgDeliveryTime > 0 ? `${avgDeliveryTime} min` : '--'}
+  </p>
+  <p className="text-xs text-white/50 mt-1">
+    Avg Delivery Time
+  </p>
+</div>
         </div>
 
         {/* Search & Filters */}
