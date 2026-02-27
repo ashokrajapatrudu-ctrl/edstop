@@ -481,8 +481,9 @@ const monthlySpendData = Object.entries(monthlySpendMap)
       </ResponsiveContainer>
     </div>
   </div>
-
 </div>
+)}
+
         {/* Summary Stats */}
         <div className="grid grid-cols-3 gap-3 mb-6 animate-slide-up">
           <div className="glass-card rounded-2xl p-4 border border-white/10 text-center">
