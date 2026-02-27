@@ -298,8 +298,12 @@ export default function OrderHistoryPage() {
 
 const deliveredOrders = orders.filter(o => o.status === 'delivered');
 
+// Totals
 const totalSpent = deliveredOrders.reduce((sum, o) => sum + o.total, 0);
+const totalCashback = deliveredOrders.reduce((sum, o) => sum + (o.cashbackEarned || 0), 0);
+const deliveredCount = deliveredOrders.length;
 
+// Monthly Spend Aggregation
 const monthlySpendMap: Record<string, number> = {};
 
 deliveredOrders.forEach(order => {
@@ -315,9 +319,6 @@ const monthlySpendData = Object.entries(monthlySpendMap)
     const [m2, y2] = b.month.split('/');
     return new Date(`${y1}-${m1}-01`).getTime() - new Date(`${y2}-${m2}-01`).getTime();
   });
-  const totalCashback = orders.filter(o => o.status === 'delivered').reduce((sum, o) => sum + (o.cashbackEarned || 0), 0);
-  const deliveredCount = orders.filter(o => o.status === 'delivered').length;
-
   if (!isHydrated) {
     return (
       <div className="min-h-screen bg-background">
@@ -439,49 +440,59 @@ const monthlySpendData = Object.entries(monthlySpendMap)
       <main className="relative z-10 container mx-auto px-4 py-6 max-w-4xl">
         {/* Analytics Section */}
 {/* Analytics Section */}
-<div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6 animate-slide-up">
-   ... charts ...
-</div>
-  
-  {/* Line Chart */}
-  <div className="glass-card rounded-2xl p-4 border border-white/10">
-    <h2 className="text-white font-semibold mb-3">📈 Spend Trend</h2>
-    <div style={{ width: '100%', height: 250 }}>
-      <ResponsiveContainer>
-        <LineChart data={monthlySpendData}>
-          <CartesianGrid strokeDasharray="3 3" stroke="#ffffff10" />
-          <XAxis dataKey="month" stroke="#ffffff50" />
-          <YAxis stroke="#ffffff50" />
-          <Tooltip />
-          <Line
-            type="monotone"
-            dataKey="total"
-            stroke="#8b5cf6"
-            strokeWidth={3}
-            dot={{ r: 4 }}
-            activeDot={{ r: 6 }}
-          />
-        </LineChart>
-      </ResponsiveContainer>
-    </div>
-  </div>
+{monthlySpendData.length > 0 ? (
+  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6 animate-slide-up">
 
-  {/* Bar Chart */}
-  <div className="glass-card rounded-2xl p-4 border border-white/10">
-    <h2 className="text-white font-semibold mb-3">📊 Monthly Spend</h2>
-    <div style={{ width: '100%', height: 250 }}>
-      <ResponsiveContainer>
-        <BarChart data={monthlySpendData}>
-          <CartesianGrid strokeDasharray="3 3" stroke="#ffffff10" />
-          <XAxis dataKey="month" stroke="#ffffff50" />
-          <YAxis stroke="#ffffff50" />
-          <Tooltip />
-          <Bar dataKey="total" fill="#6366f1" radius={[6, 6, 0, 0]} />
-        </BarChart>
-      </ResponsiveContainer>
+    {/* Line Chart */}
+    <div className="glass-card rounded-2xl p-4 border border-white/10">
+      <h2 className="text-white font-semibold mb-3">📈 Spend Trend</h2>
+      <div style={{ width: '100%', height: 250 }}>
+        <ResponsiveContainer>
+          <LineChart data={monthlySpendData}>
+            <CartesianGrid strokeDasharray="3 3" stroke="#ffffff10" />
+            <XAxis dataKey="month" stroke="#ffffff50" />
+            <YAxis stroke="#ffffff50" />
+            <Tooltip
+              contentStyle={{ backgroundColor: '#111', border: '1px solid #333' }}
+              labelStyle={{ color: '#aaa' }}
+            />
+            <Line
+              type="monotone"
+              dataKey="total"
+              stroke="#8b5cf6"
+              strokeWidth={3}
+              dot={{ r: 4 }}
+              activeDot={{ r: 6 }}
+            />
+          </LineChart>
+        </ResponsiveContainer>
+      </div>
     </div>
+
+    {/* Bar Chart */}
+    <div className="glass-card rounded-2xl p-4 border border-white/10">
+      <h2 className="text-white font-semibold mb-3">📊 Monthly Spend</h2>
+      <div style={{ width: '100%', height: 250 }}>
+        <ResponsiveContainer>
+          <BarChart data={monthlySpendData}>
+            <CartesianGrid strokeDasharray="3 3" stroke="#ffffff10" />
+            <XAxis dataKey="month" stroke="#ffffff50" />
+            <YAxis stroke="#ffffff50" />
+            <Tooltip
+              contentStyle={{ backgroundColor: '#111', border: '1px solid #333' }}
+              labelStyle={{ color: '#aaa' }}
+            />
+            <Bar dataKey="total" fill="#6366f1" radius={[6, 6, 0, 0]} />
+          </BarChart>
+        </ResponsiveContainer>
+      </div>
+    </div>
+
   </div>
-</div>
+) : (
+  <div className="glass-card rounded-2xl p-6 border border-white/10 text-center text-white/40 mb-6">
+    No analytics yet — place your first order 🚀
+  </div>
 )}
 
         {/* Summary Stats */}
