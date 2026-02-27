@@ -14,6 +14,7 @@ import { useRetry } from '@/hooks/useRetry';
 import { useToast } from '@/contexts/ToastContext';
 import { useDarkStoreRealtime } from '@/hooks/useDarkStoreRealtime';
 import { useAuth } from '@/contexts/AuthContext';
+import { createClient } from '@/lib/supabase/client';
 
 interface Product {
   id: string;
@@ -461,9 +462,11 @@ const DarkStoreInteractive = () => {
 
       // Persist order to Supabase
       if (user?.id) {
+  console.log("User ID:", user.id);
+
   const supabase = createClient();
 
-  const { error } = await supabase.from('orders').insert({
+  const { data, error } = await supabase.from('orders').insert({
     user_id: user.id,
     order_number: orderId,
     order_type: 'store',
@@ -478,16 +481,10 @@ const DarkStoreInteractive = () => {
     items: checkoutItems,
     notes: null,
     created_at: new Date().toISOString(),
-  });
+  }).select();
 
-  if (error) {
-    console.error('Order insert failed:', error.message);
-  } else {
-    console.log('Order inserted successfully');
-  }
+  console.log("Insert result:", { data, error });
 }
-    
-  };
 
   if (!isHydrated) {
     return (
