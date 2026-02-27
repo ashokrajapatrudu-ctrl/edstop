@@ -98,51 +98,57 @@ export function useDarkStoreRealtime(
     let cancelled = false;
     setIsLoadingDelivery(true);
 
-    const fetchActiveOrder = async () => {
-      try {
-        let supabase = createClient();
+   const fetchActiveOrder = async () => {
+  try {
+    const supabase = createClient();
 
-        // If a specific orderId is provided, use it; otherwise find the latest active store order
-        let query = supabase
-          .from('orders')
-          .select('id, order_number, status, estimated_delivery_time, items, updated_at')
-          .eq('user_id', userId)
-          .eq('order_type', 'store')
-          .not('status', 'in', '("delivered","cancelled")')
-          .order('created_at', { ascending: false })
-          .limit(1);
+    let data;
 
-        if (activeOrderId) {
-          query = supabase
-            .from('orders')
-            .select('id, order_number, status, estimated_delivery_time, items, updated_at')
-            .eq('id', activeOrderId)
-            .eq('user_id', userId)
-            .limit(1);
-        }
+    if (activeOrderId) {
+      // Fetch specific order by order_number (NOT id)
+      const response = await supabase
+        .from('orders')
+        .select('id, order_number, status, estimated_delivery_time, items, updated_at')
+        .eq('order_number', activeOrderId)
+        .eq('user_id', userId)
+        .single();
 
-        const { data } = await query;
+      data = response.data ? [response.data] : [];
+    } else {
+      // Fetch latest active store order
+      const response = await supabase
+        .from('orders')
+        .select('id, order_number, status, estimated_delivery_time, items, updated_at')
+        .eq('user_id', userId)
+        .eq('order_type', 'store')
+        .not('status', 'in', '("delivered","cancelled")')
+        .order('created_at', { ascending: false })
+        .limit(1);
 
-        if (cancelled) return;
+      data = response.data;
+    }
 
-        if (data && data.length > 0) {
-          const row = data[0] as OrderRow;
-          prevStatusRef.current = row.status;
-          setActiveDelivery({
-            orderId: row.id,
-            orderNumber: row.order_number,
-            status: row.status as DarkStoreOrderStatus,
-            etaMinutes: calcEta(row.estimated_delivery_time),
-            estimatedDeliveryTime: row.estimated_delivery_time,
-            updatedAt: row.updated_at,
-          });
-        }
-      } catch {
-        // silently fail — UI falls back to mock
-      } finally {
-        if (!cancelled) setIsLoadingDelivery(false);
-      }
-    };
+    if (cancelled) return;
+
+    if (data && data.length > 0) {
+      const row = data[0] as OrderRow;
+      prevStatusRef.current = row.status;
+
+      setActiveDelivery({
+        orderId: row.id,
+        orderNumber: row.order_number,
+        status: row.status as DarkStoreOrderStatus,
+        etaMinutes: calcEta(row.estimated_delivery_time),
+        estimatedDeliveryTime: row.estimated_delivery_time,
+        updatedAt: row.updated_at,
+      });
+    }
+  } catch (err) {
+    console.error('Fetch active order failed:', err);
+  } finally {
+    if (!cancelled) setIsLoadingDelivery(false);
+  }
+};
 
     fetchActiveOrder();
     return () => { cancelled = true; };
@@ -163,9 +169,8 @@ export function useDarkStoreRealtime(
 
     // Channel 1: Track delivery status of active store order
     const deliveryFilter = activeOrderId
-      ? `id=eq.${activeOrderId}`
-      : `user_id=eq.${userId}`;
-
+  ? `order_number=eq.${activeOrderId}`
+  : `user_id=eq.${userId}`;
     const deliveryChannel = supabase
       .channel(`darkstore:delivery:${userId}:${activeOrderId ?? 'latest'}`)
       .on(
