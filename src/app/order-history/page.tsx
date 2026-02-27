@@ -1,5 +1,15 @@
 'use client';
-
+import {
+  LineChart,
+  Line,
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  Tooltip,
+  ResponsiveContainer,
+  CartesianGrid,
+} from 'recharts';
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
@@ -286,7 +296,25 @@ export default function OrderHistoryPage() {
       return a.total - b.total;
     });
 
-  const totalSpent = orders.filter(o => o.status === 'delivered').reduce((sum, o) => sum + o.total, 0);
+const deliveredOrders = orders.filter(o => o.status === 'delivered');
+
+const totalSpent = deliveredOrders.reduce((sum, o) => sum + o.total, 0);
+
+const monthlySpendMap: Record<string, number> = {};
+
+deliveredOrders.forEach(order => {
+  const [day, month, year] = order.date.split('/');
+  const key = `${month}/${year}`;
+  monthlySpendMap[key] = (monthlySpendMap[key] || 0) + order.total;
+});
+
+const monthlySpendData = Object.entries(monthlySpendMap)
+  .map(([month, total]) => ({ month, total }))
+  .sort((a, b) => {
+    const [m1, y1] = a.month.split('/');
+    const [m2, y2] = b.month.split('/');
+    return new Date(`${y1}-${m1}-01`).getTime() - new Date(`${y2}-${m2}-01`).getTime();
+  });
   const totalCashback = orders.filter(o => o.status === 'delivered').reduce((sum, o) => sum + (o.cashbackEarned || 0), 0);
   const deliveredCount = orders.filter(o => o.status === 'delivered').length;
 
@@ -409,6 +437,52 @@ export default function OrderHistoryPage() {
       </header>
 
       <main className="relative z-10 container mx-auto px-4 py-6 max-w-4xl">
+        {/* Analytics Section */}
+{/* Analytics Section */}
+<div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6 animate-slide-up">
+   ... charts ...
+</div>
+  
+  {/* Line Chart */}
+  <div className="glass-card rounded-2xl p-4 border border-white/10">
+    <h2 className="text-white font-semibold mb-3">📈 Spend Trend</h2>
+    <div style={{ width: '100%', height: 250 }}>
+      <ResponsiveContainer>
+        <LineChart data={monthlySpendData}>
+          <CartesianGrid strokeDasharray="3 3" stroke="#ffffff10" />
+          <XAxis dataKey="month" stroke="#ffffff50" />
+          <YAxis stroke="#ffffff50" />
+          <Tooltip />
+          <Line
+            type="monotone"
+            dataKey="total"
+            stroke="#8b5cf6"
+            strokeWidth={3}
+            dot={{ r: 4 }}
+            activeDot={{ r: 6 }}
+          />
+        </LineChart>
+      </ResponsiveContainer>
+    </div>
+  </div>
+
+  {/* Bar Chart */}
+  <div className="glass-card rounded-2xl p-4 border border-white/10">
+    <h2 className="text-white font-semibold mb-3">📊 Monthly Spend</h2>
+    <div style={{ width: '100%', height: 250 }}>
+      <ResponsiveContainer>
+        <BarChart data={monthlySpendData}>
+          <CartesianGrid strokeDasharray="3 3" stroke="#ffffff10" />
+          <XAxis dataKey="month" stroke="#ffffff50" />
+          <YAxis stroke="#ffffff50" />
+          <Tooltip />
+          <Bar dataKey="total" fill="#6366f1" radius={[6, 6, 0, 0]} />
+        </BarChart>
+      </ResponsiveContainer>
+    </div>
+  </div>
+
+</div>
         {/* Summary Stats */}
         <div className="grid grid-cols-3 gap-3 mb-6 animate-slide-up">
           <div className="glass-card rounded-2xl p-4 border border-white/10 text-center">
