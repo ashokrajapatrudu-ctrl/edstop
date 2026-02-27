@@ -4,6 +4,9 @@ import {
   Line,
   BarChart,
   Bar,
+  PieChart,
+  Pie,
+  Cell,
   XAxis,
   YAxis,
   Tooltip,
@@ -302,7 +305,14 @@ const deliveredOrders = orders.filter(o => o.status === 'delivered');
 const totalSpent = deliveredOrders.reduce((sum, o) => sum + o.total, 0);
 const totalCashback = deliveredOrders.reduce((sum, o) => sum + (o.cashbackEarned || 0), 0);
 const deliveredCount = deliveredOrders.length;
+// Order Type Distribution
+const foodCount = orders.filter(o => o.type === 'food' && o.status === 'delivered').length;
+const storeCount = orders.filter(o => o.type === 'dark-store' && o.status === 'delivered').length;
 
+const orderTypeData = [
+  { name: 'Food', value: foodCount },
+  { name: 'Dark Store', value: storeCount }
+];
 // Monthly Spend Aggregation
 const monthlySpendMap: Record<string, number> = {};
 
@@ -519,6 +529,44 @@ const monthlySpendData = Object.entries(monthlySpendMap)
         <Bar dataKey="amount" fill="#22c55e" radius={[6, 6, 6, 6]} />
       </BarChart>
     </ResponsiveContainer>
+  </div>
+</div>
+{/* Order Type Distribution */}
+<div className="glass-card rounded-2xl p-5 border border-white/10 mb-6 animate-slide-up">
+  <h2 className="text-white font-semibold mb-4">📦 Order Distribution</h2>
+
+  <div style={{ width: '100%', height: 250 }}>
+    <ResponsiveContainer>
+      <PieChart>
+        <Pie
+          data={orderTypeData}
+          dataKey="value"
+          nameKey="name"
+          cx="50%"
+          cy="50%"
+          outerRadius={80}
+          label
+        >
+          <Cell fill="#f97316" />
+          <Cell fill="#3b82f6" />
+        </Pie>
+        <Tooltip
+          contentStyle={{ backgroundColor: '#111', border: '1px solid #333' }}
+          labelStyle={{ color: '#aaa' }}
+        />
+      </PieChart>
+    </ResponsiveContainer>
+  </div>
+
+  <div className="flex justify-center gap-6 mt-4 text-sm">
+    <div className="flex items-center gap-2 text-orange-400">
+      <span className="w-3 h-3 bg-orange-500 rounded-full"></span>
+      Food: {foodCount}
+    </div>
+    <div className="flex items-center gap-2 text-blue-400">
+      <span className="w-3 h-3 bg-blue-500 rounded-full"></span>
+      Dark Store: {storeCount}
+    </div>
   </div>
 </div>
         {/* Summary Stats */}
