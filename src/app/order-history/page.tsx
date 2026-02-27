@@ -319,6 +319,10 @@ const monthlySpendData = Object.entries(monthlySpendMap)
     const [m2, y2] = b.month.split('/');
     return new Date(`${y1}-${m1}-01`).getTime() - new Date(`${y2}-${m2}-01`).getTime();
   });
+  const cashbackComparisonData = [
+  { name: 'Total Spent', amount: totalSpent },
+  { name: 'Cashback Earned', amount: totalCashback }
+];
   if (!isHydrated) {
     return (
       <div className="min-h-screen bg-background">
@@ -494,7 +498,29 @@ const monthlySpendData = Object.entries(monthlySpendMap)
     No analytics yet — place your first order 🚀
   </div>
 )}
+{/* Cashback vs Spend */}
+<div className="glass-card rounded-2xl p-5 border border-white/10 mb-6 animate-slide-up">
+  <h2 className="text-white font-semibold mb-4">🪙 Cashback vs Spend</h2>
 
+  <div style={{ width: '100%', height: 220 }}>
+    <ResponsiveContainer>
+      <BarChart
+        data={cashbackComparisonData}
+        layout="vertical"
+        margin={{ top: 10, right: 20, left: 40, bottom: 10 }}
+      >
+        <CartesianGrid strokeDasharray="3 3" stroke="#ffffff10" />
+        <XAxis type="number" stroke="#ffffff50" />
+        <YAxis type="category" dataKey="name" stroke="#ffffff50" />
+        <Tooltip
+          contentStyle={{ backgroundColor: '#111', border: '1px solid #333' }}
+          labelStyle={{ color: '#aaa' }}
+        />
+        <Bar dataKey="amount" fill="#22c55e" radius={[6, 6, 6, 6]} />
+      </BarChart>
+    </ResponsiveContainer>
+  </div>
+</div>
         {/* Summary Stats */}
         <div className="grid grid-cols-3 gap-3 mb-6 animate-slide-up">
           <div className="glass-card rounded-2xl p-4 border border-white/10 text-center">
