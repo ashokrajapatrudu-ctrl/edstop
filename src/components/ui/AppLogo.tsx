@@ -14,7 +14,7 @@ interface AppLogoProps {
 }
 
 function AppLogo({
-  src = '/assets/images/app_logo.png',
+  src,
   text,
   iconName = 'SparklesIcon',
   size = 64,
@@ -28,10 +28,20 @@ function AppLogo({
     >
       {/* Show image if src provided, otherwise show icon */}
       {src ? (
-        <AppImage src={src} alt="Logo" width={size} height={size} className="flex-shrink-0" />
-      ) : (
-        <AppIcon name={iconName} size={size} className="flex-shrink-0" />
-      )}
+  <AppImage
+    src={src}
+    alt="Logo"
+    width={size}
+    height={size}
+    className="flex-shrink-0"
+  />
+) : (
+  <AppIcon
+    name={iconName}
+    size={size}
+    className="flex-shrink-0 text-primary"
+  />
+)}
 
       {/* Show text if provided */}
       {text && <span className="text-xl font-bold">{text}</span>}
