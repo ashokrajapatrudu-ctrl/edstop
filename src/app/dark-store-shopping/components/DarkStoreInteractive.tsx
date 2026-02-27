@@ -443,56 +443,66 @@ const DarkStoreInteractive = () => {
   const handleRemoveItem = (productId: string) => {
     setCart(prev => { const next = { ...prev }; delete next[productId]; return next; });
   };
+const handleCheckout = async (promoCode?: string, promoDiscount?: number) => {
+  setIsCheckingOut(true);
 
- const handleCheckout = async (promoCode?: string, promoDiscount?: number) => {
-    setIsCheckingOut(true);
-    
-      setIsCheckingOut(false);
-      const orderId = `DS${Date.now().toString().slice(-8)}`;
-      const checkoutItems = cartItems.map(item => ({ name: item.name, quantity: item.quantity, price: item.price }));
-      const subtotal = cartItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
-      const cartDeliveryFee = subtotal >= 99 ? 0 : 10;
-      const discount = promoDiscount ?? 0;
-      const orderTotal = subtotal + cartDeliveryFee;
-      setOrderDetails({ orderId, total: orderTotal - discount, items: checkoutItems, promoCode, promoDiscount: discount > 0 ? discount : undefined });
-      setOrderSuccess(true);
-      setCart({});
-      setActiveOrderId(orderId);
-      toast.success('Order placed!', `Order #${orderId} confirmed. Delivery in 10-20 min`);
+  const orderId = `DS${Date.now().toString().slice(-8)}`;
+  const checkoutItems = cartItems.map(item => ({
+    name: item.name,
+    quantity: item.quantity,
+    price: item.price,
+  }));
 
-      // Persist order to Supabase
-      if (user?.id) {
-  console.log("User ID:", user.id);
+  const subtotal = cartItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
+  const cartDeliveryFee = subtotal >= 99 ? 0 : 10;
+  const discount = promoDiscount ?? 0;
+  const orderTotal = subtotal + cartDeliveryFee;
 
-  const supabase = createClient();
+  if (user?.id) {
+    const supabase = createClient();
 
-  const { data, error } = await supabase
-    .from('orders')
-    .insert({
-      user_id: user.id,
-      order_number: orderId,
-      order_type: 'store',
-      status: 'pending',
-      total_amount: orderTotal,
-      delivery_fee: cartDeliveryFee,
-      discount_amount: discount,
-      promo_code: promoCode ?? null,
-      promo_discount: discount,
-      final_amount: Math.max(0, orderTotal - discount),
-      payment_method: 'razorpay',
-      items: checkoutItems,
-      notes: null,
-      created_at: new Date().toISOString(),
-    })
-    .select();
+    const { data, error } = await supabase
+      .from('orders')
+      .insert({
+        user_id: user.id,
+        order_number: orderId,
+        order_type: 'store',
+        status: 'pending',
+        total_amount: orderTotal,
+        delivery_fee: cartDeliveryFee,
+        discount_amount: discount,
+        promo_code: promoCode ?? null,
+        promo_discount: discount,
+        final_amount: Math.max(0, orderTotal - discount),
+        payment_method: 'razorpay',
+        items: checkoutItems,
+        notes: null,
+        created_at: new Date().toISOString(),
+      })
+      .select();
 
-  console.log("Insert result:", { data, error });
+    console.log("Insert result:", { data, error });
 
-  if (error) {
-    console.error('Order insert failed:', error.message);
-  } else {
-    console.log('Order inserted successfully');
+    if (error) {
+      console.error('Order insert failed:', error.message);
+    }
   }
+
+  setOrderDetails({
+    orderId,
+    total: orderTotal - discount,
+    items: checkoutItems,
+    promoCode,
+    promoDiscount: discount > 0 ? discount : undefined,
+  });
+
+  setOrderSuccess(true);
+  setCart({});
+  setActiveOrderId(orderId);
+  toast.success('Order placed!', `Order #${orderId} confirmed. Delivery in 10-20 min`);
+
+  setIsCheckingOut(false);
+};
 }
 
   if (!isHydrated) {
