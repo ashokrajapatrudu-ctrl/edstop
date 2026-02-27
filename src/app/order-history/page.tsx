@@ -364,6 +364,36 @@ const monthlySpendData = Object.entries(monthlySpendMap)
   { name: 'Total Spent', amount: totalSpent },
   { name: 'Cashback Earned', amount: totalCashback }
 ];
+// Weekly Spend (Last 7 Days)
+const today = new Date();
+const last7DaysMap: Record<string, number> = {};
+
+// Initialize last 7 days
+for (let i = 6; i >= 0; i--) {
+  const d = new Date();
+  d.setDate(today.getDate() - i);
+  const key = d.toISOString().split('T')[0];
+  last7DaysMap[key] = 0;
+}
+
+// Aggregate delivered orders
+orders.forEach(order => {
+  if (order.status !== 'delivered') return;
+
+  const [day, month, year] = order.date.split('/');
+  const dateObj = new Date(`${year}-${month}-${day}`);
+  const key = dateObj.toISOString().split('T')[0];
+
+  if (last7DaysMap.hasOwnProperty(key)) {
+    last7DaysMap[key] += order.total;
+  }
+});
+
+// Convert to chart format
+const weeklySpendData = Object.entries(last7DaysMap).map(([date, total]) => ({
+  date,
+  total
+}));
   if (!isHydrated) {
     return (
       <div className="min-h-screen bg-background">
@@ -559,6 +589,33 @@ const monthlySpendData = Object.entries(monthlySpendMap)
         />
         <Bar dataKey="amount" fill="#22c55e" radius={[6, 6, 6, 6]} />
       </BarChart>
+    </ResponsiveContainer>
+  </div>
+</div>
+{/* Weekly Spend Trend */}
+<div className="glass-card rounded-2xl p-4 border border-white/10 mb-6 animate-slide-up">
+  <h2 className="text-white font-semibold mb-3">📅 Last 7 Days Spend</h2>
+  <div style={{ width: '100%', height: 220 }}>
+    <ResponsiveContainer>
+      <LineChart data={weeklySpendData}>
+        <CartesianGrid strokeDasharray="3 3" stroke="#ffffff10" />
+        <XAxis
+          dataKey="date"
+          stroke="#ffffff50"
+          tickFormatter={(value) =>
+            new Date(value).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })
+          }
+        />
+        <YAxis stroke="#ffffff50" />
+        <Tooltip />
+        <Line
+          type="monotone"
+          dataKey="total"
+          stroke="#22c55e"
+          strokeWidth={3}
+          dot={{ r: 4 }}
+        />
+      </LineChart>
     </ResponsiveContainer>
   </div>
 </div>
