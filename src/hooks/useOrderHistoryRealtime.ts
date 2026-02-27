@@ -157,6 +157,9 @@ export function useOrderHistoryRealtime(): OrderHistoryRealtimeResult {
         .select('*')
         .eq('user_id', user.id)
         .order('created_at', { ascending: false });
+      
+      console.log("Fetched orders:", data);
+      console.log("Fetch error:", error);
 
       if (error) throw error;
 
