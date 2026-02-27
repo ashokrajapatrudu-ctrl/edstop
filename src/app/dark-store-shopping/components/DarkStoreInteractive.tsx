@@ -466,24 +466,33 @@ const DarkStoreInteractive = () => {
 
   const supabase = createClient();
 
-  const { data, error } = await supabase.from('orders').insert({
-    user_id: user.id,
-    order_number: orderId,
-    order_type: 'store',
-    status: 'pending',
-    total_amount: orderTotal,
-    delivery_fee: cartDeliveryFee,
-    discount_amount: discount,
-    promo_code: promoCode ?? null,
-    promo_discount: discount,
-    final_amount: Math.max(0, orderTotal - discount),
-    payment_method: 'razorpay',
-    items: checkoutItems,
-    notes: null,
-    created_at: new Date().toISOString(),
-  }).select();
+  const { data, error } = await supabase
+    .from('orders')
+    .insert({
+      user_id: user.id,
+      order_number: orderId,
+      order_type: 'store',
+      status: 'pending',
+      total_amount: orderTotal,
+      delivery_fee: cartDeliveryFee,
+      discount_amount: discount,
+      promo_code: promoCode ?? null,
+      promo_discount: discount,
+      final_amount: Math.max(0, orderTotal - discount),
+      payment_method: 'razorpay',
+      items: checkoutItems,
+      notes: null,
+      created_at: new Date().toISOString(),
+    })
+    .select();
 
   console.log("Insert result:", { data, error });
+
+  if (error) {
+    console.error('Order insert failed:', error.message);
+  } else {
+    console.log('Order inserted successfully');
+  }
 }
 
   if (!isHydrated) {
