@@ -443,9 +443,9 @@ const DarkStoreInteractive = () => {
     setCart(prev => { const next = { ...prev }; delete next[productId]; return next; });
   };
 
-  const handleCheckout = (promoCode?: string, promoDiscount?: number) => {
+ const handleCheckout = async (promoCode?: string, promoDiscount?: number) => {
     setIsCheckingOut(true);
-    setTimeout(() => {
+    
       setIsCheckingOut(false);
       const orderId = `DS${Date.now().toString().slice(-8)}`;
       const checkoutItems = cartItems.map(item => ({ name: item.name, quantity: item.quantity, price: item.price }));
@@ -461,27 +461,32 @@ const DarkStoreInteractive = () => {
 
       // Persist order to Supabase
       if (user?.id) {
-        const { createClient } = require('@/lib/supabase/client');
-        const supabase = createClient();
-        supabase.from('orders').insert({
-          user_id: user.id,
-          order_number: orderId,
-          order_type: 'store',
-          status: 'pending',
-          total_amount: orderTotal,
-          delivery_fee: cartDeliveryFee,
-          discount_amount: discount,
-          promo_code: promoCode ?? null,
-          promo_discount: discount,
-          final_amount: Math.max(0, orderTotal - discount),
-          payment_method: 'razorpay',
-          items: checkoutItems,
-          notes: null,
-        }).then(({ error }: { error: Error | null }) => {
-          if (error) console.error('Failed to save store order:', error.message);
-        });
-      }
-    }, 1500);
+  const supabase = createClient();
+
+  const { error } = await supabase.from('orders').insert({
+    user_id: user.id,
+    order_number: orderId,
+    order_type: 'store',
+    status: 'pending',
+    total_amount: orderTotal,
+    delivery_fee: cartDeliveryFee,
+    discount_amount: discount,
+    promo_code: promoCode ?? null,
+    promo_discount: discount,
+    final_amount: Math.max(0, orderTotal - discount),
+    payment_method: 'razorpay',
+    items: checkoutItems,
+    notes: null,
+    created_at: new Date().toISOString(),
+  });
+
+  if (error) {
+    console.error('Order insert failed:', error.message);
+  } else {
+    console.log('Order inserted successfully');
+  }
+}
+    
   };
 
   if (!isHydrated) {
