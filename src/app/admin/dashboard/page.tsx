@@ -9,8 +9,8 @@ import {
   XAxis,
   YAxis,
   Tooltip,
-  ResponsiveContainer,
   CartesianGrid,
+  ResponsiveContainer
 } from 'recharts';
 
 export default function AdminDashboardPage() {
@@ -26,6 +26,9 @@ export default function AdminDashboardPage() {
   const [riderWeekly, setRiderWeekly] = useState<any[]>([]);
   const [riderPending, setRiderPending] = useState<any[]>([]);
   const [restaurantPending, setRestaurantPending] = useState<any[]>([]);
+  const [profitData, setProfitData] = useState<any>(null);
+  const [monthlyProfit, setMonthlyProfit] = useState<any[]>([]);
+  const [cashFlow, setCashFlow] = useState<any>(null);
   useEffect(() => {
     const fetchAdminAnalytics = async () => {
       const supabase = createClient();
@@ -46,8 +49,16 @@ export default function AdminDashboardPage() {
         .from('admin_profit_overview')
        .select('*')
        .single();
+      const { data: profit } = await supabase
+        .from('admin_platform_profit')
+        .select('*')
+        .single();
+         setProfitData(profit);
+       const { data: monthlyProfitData } = await supabase
+        .from('admin_monthly_profit')
+        .select('*');
 
-
+       setMonthlyProfit(monthlyProfitData || []);
        const { data: productData } = await supabase
         .from('admin_top_products')
         .select('*');
@@ -69,7 +80,12 @@ export default function AdminDashboardPage() {
        const { data: restaurantData } = await supabase
         .from('restaurant_pending_settlements')
         .select('*');
+       const { data: cash } = await supabase
+        .from('admin_cashflow_summary')
+        .select('*')
+        .single();
 
+        setCashFlow(cash);
       
 
       setRiderLifetime(lifetimeData || []);
@@ -142,7 +158,22 @@ export default function AdminDashboardPage() {
       ₹{profitOverview?.gross_revenue ?? 0}
     </p>
   </div>
+<div className="bg-white shadow rounded-xl p-6 mt-8">
+  <h2 className="text-xl font-semibold mb-4">
+    Monthly Platform Revenue
+  </h2>
 
+  <ResponsiveContainer width="100%" height={300}>
+    <LineChart data={monthlyProfit}>
+      <CartesianGrid strokeDasharray="3 3" />
+      <XAxis dataKey="month" />
+      <YAxis />
+      <Tooltip />
+      <Line type="monotone" dataKey="food_commission" stroke="#10b981" />
+      <Line type="monotone" dataKey="store_revenue" stroke="#6366f1" />
+    </LineChart>
+  </ResponsiveContainer>
+</div>
   <div className="bg-white shadow rounded-xl p-6">
     <p className="text-gray-500 text-sm">Total Discounts</p>
     <p className="text-2xl font-bold">
@@ -156,6 +187,36 @@ export default function AdminDashboardPage() {
       ₹{profitOverview?.net_revenue ?? 0}
     </p>
   </div>
+  <div className="bg-white shadow rounded-xl p-6 mt-8">
+  <h2 className="text-xl font-semibold mb-4">
+    Cash Flow Overview
+  </h2>
+
+  {cashFlow && (
+    <div className="grid grid-cols-3 gap-6">
+      <div>
+        <p>Total Gross Orders</p>
+        <p className="text-lg font-bold text-indigo-600">
+          ₹{cashFlow.total_gross_orders}
+        </p>
+      </div>
+
+      <div>
+        <p>Rider Paid</p>
+        <p className="text-lg font-bold text-red-600">
+          ₹{cashFlow.rider_paid}
+        </p>
+      </div>
+
+      <div>
+        <p>Restaurant Paid</p>
+        <p className="text-lg font-bold text-orange-600">
+          ₹{cashFlow.restaurant_paid}
+        </p>
+      </div>
+    </div>
+  )}
+</div>
 </div> 
       <div className="bg-white shadow rounded-xl p-6">
   <h2 className="text-xl font-semibold mb-4">Top Restaurants</h2>
@@ -243,7 +304,17 @@ export default function AdminDashboardPage() {
   <h2 className="text-xl font-semibold mb-4">
     Restaurant Pending Payments
   </h2>
-
+<div className="mt-6">
+  <p className="text-gray-500">Net Platform Profit</p>
+  <p className="text-2xl font-bold text-black">
+    ₹{
+      (profitData.food_commission || 0)
+      + (profitData.store_revenue || 0)
+      - (profitData.rider_paid || 0)
+      - (profitData.restaurant_paid || 0)
+    }
+  </p>
+</div>
   <table className="w-full text-left">
     <thead>
       <tr className="border-b">
@@ -332,6 +403,43 @@ export default function AdminDashboardPage() {
         ))}
     </tbody>
   </table>
+</div>
+<div className="bg-white shadow rounded-xl p-6 mt-8">
+  <h2 className="text-xl font-semibold mb-4">
+    Platform Financial Summary
+  </h2>
+
+  {profitData && (
+    <div className="grid grid-cols-2 gap-6">
+      <div>
+        <p className="text-gray-500">Food Commission</p>
+        <p className="text-lg font-bold text-green-600">
+          ₹{profitData.food_commission}
+        </p>
+      </div>
+
+      <div>
+        <p className="text-gray-500">Store Revenue</p>
+        <p className="text-lg font-bold text-indigo-600">
+          ₹{profitData.store_revenue}
+        </p>
+      </div>
+
+      <div>
+        <p className="text-gray-500">Rider Paid</p>
+        <p className="text-lg font-bold text-red-600">
+          ₹{profitData.rider_paid}
+        </p>
+      </div>
+
+      <div>
+        <p className="text-gray-500">Restaurant Paid</p>
+        <p className="text-lg font-bold text-orange-600">
+          ₹{profitData.restaurant_paid}
+        </p>
+      </div>
+    </div>
+  )}
 </div>
       {/* Monthly Revenue Chart */}
       <div className="bg-white shadow rounded-xl p-6">
