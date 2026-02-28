@@ -25,6 +25,7 @@ export default function AdminDashboardPage() {
   const [riderLifetime, setRiderLifetime] = useState<any[]>([]);
   const [riderWeekly, setRiderWeekly] = useState<any[]>([]);
   const [riderPending, setRiderPending] = useState<any[]>([]);
+  const [restaurantPending, setRestaurantPending] = useState<any[]>([]);
   useEffect(() => {
     const fetchAdminAnalytics = async () => {
       const supabase = createClient();
@@ -46,9 +47,6 @@ export default function AdminDashboardPage() {
        .select('*')
        .single();
 
-       const { data: restaurantData } = await supabase
-        .from('admin_top_restaurants')
-        .select('*');
 
        const { data: productData } = await supabase
         .from('admin_top_products')
@@ -68,11 +66,15 @@ export default function AdminDashboardPage() {
        const { data: pendingData } = await supabase
        .from('rider_pending_settlements')
        .select('*');
+       const { data: restaurantData } = await supabase
+        .from('restaurant_pending_settlements')
+        .select('*');
+
+      
 
       setRiderLifetime(lifetimeData || []);
       setRiderWeekly(weeklyData || []);
       setRiderPending(pendingData || []);
-
       setProfitOverview(profitData);
       setTopRestaurants(restaurantData || []);
       setTopProducts(productData || []);
@@ -237,7 +239,57 @@ export default function AdminDashboardPage() {
 </div>
        <div className="bg-white shadow rounded-xl p-6">
   <h2 className="text-xl font-semibold mb-4">Pending Rider Payments</h2>
+<div className="bg-white shadow rounded-xl p-6 mt-8">
+  <h2 className="text-xl font-semibold mb-4">
+    Restaurant Pending Payments
+  </h2>
 
+  <table className="w-full text-left">
+    <thead>
+      <tr className="border-b">
+        <th className="py-2">Restaurant</th>
+        <th className="py-2">Week</th>
+        <th className="py-2">Pending</th>
+      </tr>
+    </thead>
+    <tbody>
+      {restaurantPending
+        .filter(r => r.pending_amount > 0)
+        .map((r, i) => (
+          <tr key={i} className="border-b">
+            <td className="py-2">{r.restaurant_name}</td>
+            <td className="py-2">
+              {new Date(r.week_start).toLocaleDateString()}
+            </td>
+            <td className="py-2 text-red-600 font-semibold">
+              ₹{r.pending_amount}
+
+              <button
+                onClick={async () => {
+                  const supabase = createClient();
+
+                  await supabase.rpc(
+                    'mark_restaurant_payout_paid',
+                    {
+                      p_restaurant_name: r.restaurant_name,
+                      p_week_start: r.week_start,
+                      p_amount: r.pending_amount,
+                    }
+                  );
+
+                  alert('Restaurant payout marked as paid');
+                  window.location.reload();
+                }}
+                className="ml-3 bg-green-600 hover:bg-green-700 text-white px-3 py-1 rounded-lg text-xs"
+              >
+                Mark Paid
+              </button>
+            </td>
+          </tr>
+        ))}
+    </tbody>
+  </table>
+</div>
   <table className="w-full text-left">
     <thead>
       <tr className="border-b">
