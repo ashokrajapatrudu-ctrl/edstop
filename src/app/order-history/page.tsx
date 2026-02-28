@@ -1,4 +1,5 @@
 'use client';
+import { createClient } from '@/lib/supabase/client';
 import {
   LineChart,
   Line,
@@ -13,7 +14,8 @@ import {
   ResponsiveContainer,
   CartesianGrid,
 } from 'recharts';
-import { useState, useEffect } from 'react';
+
+import { useState, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Icon from '@/components/ui/AppIcon';
@@ -227,13 +229,37 @@ export default function OrderHistoryPage() {
   const [sortBy, setSortBy] = useState<'newest' | 'oldest' | 'highest' | 'lowest'>('newest');
   const [reorderingIds, setReorderingIds] = useState<Set<string>>(new Set());
   const [isHydrated, setIsHydrated] = useState(false);
-
+  const [analytics, setAnalytics] = useState<any>(null); 
   const { liveOrders, isLive, isLoading: isRealtimeLoading, hasLiveData } = useOrderHistoryRealtime();
+
+
+  const orderTypeData = [
+  { name: 'Food', value: analytics?.food_orders ?? 0 },
+  { name: 'Dark Store', value: analytics?.store_orders ?? 0 },
+];
 
   useEffect(() => {
     setIsHydrated(true);
   }, []);
+  useEffect(() => {
+  const fetchAnalytics = async () => {
+    const supabase = createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
 
+    const { data, error } = await supabase
+      .from('user_order_analytics')
+      .select('*')
+      .eq('user_id', user.id)
+      .single();
+
+    if (!error) {
+      setAnalytics(data);
+    }
+  };
+
+  fetchAnalytics();
+}, []);
   // Merge live DB orders with mock orders — live data takes precedence
   useEffect(() => {
     if (hasLiveData && liveOrders.length > 0) {
@@ -299,101 +325,11 @@ export default function OrderHistoryPage() {
       return a.total - b.total;
     });
 
-const deliveredOrders = orders.filter(o => o.status === 'delivered');
 
-// Totals
-const totalSpent = deliveredOrders.reduce((sum, o) => sum + o.total, 0);
-const totalCashback = deliveredOrders.reduce((sum, o) => sum + (o.cashbackEarned || 0), 0);
-const deliveredCount = deliveredOrders.length;
-// Average Delivery Time (minutes)
-let totalDeliveryMinutes = 0;
-let deliverySamples = 0;
 
-orders.forEach(order => {
-  // only delivered + has estimated time
-  if (
-    order.status === 'delivered' &&
-    (order as any).estimatedDeliveryTime &&
-    order.date
-  ) {
-    try {
-      const created = new Date(
-        order.date.split('/').reverse().join('-') + ' ' + order.time
-      );
-      const delivered = new Date((order as any).estimatedDeliveryTime);
 
-      const diff = (delivered.getTime() - created.getTime()) / (1000 * 60);
 
-      if (!isNaN(diff) && diff > 0) {
-        totalDeliveryMinutes += diff;
-        deliverySamples++;
-      }
-    } catch {}
-  }
-});
 
-const avgDeliveryTime =
-  deliverySamples > 0
-    ? Math.round(totalDeliveryMinutes / deliverySamples)
-    : 0;
-// Order Type Distribution
-const foodCount = orders.filter(o => o.type === 'food' && o.status === 'delivered').length;
-const storeCount = orders.filter(o => o.type === 'dark-store' && o.status === 'delivered').length;
-
-const orderTypeData = [
-  { name: 'Food', value: foodCount },
-  { name: 'Dark Store', value: storeCount }
-];
-// Monthly Spend Aggregation
-const monthlySpendMap: Record<string, number> = {};
-
-deliveredOrders.forEach(order => {
-  const [day, month, year] = order.date.split('/');
-  const key = `${month}/${year}`;
-  monthlySpendMap[key] = (monthlySpendMap[key] || 0) + order.total;
-});
-
-const monthlySpendData = Object.entries(monthlySpendMap)
-  .map(([month, total]) => ({ month, total }))
-  .sort((a, b) => {
-    const [m1, y1] = a.month.split('/');
-    const [m2, y2] = b.month.split('/');
-    return new Date(`${y1}-${m1}-01`).getTime() - new Date(`${y2}-${m2}-01`).getTime();
-  });
-  const cashbackComparisonData = [
-  { name: 'Total Spent', amount: totalSpent },
-  { name: 'Cashback Earned', amount: totalCashback }
-];
-// Weekly Spend (Last 7 Days)
-const today = new Date();
-const last7DaysMap: Record<string, number> = {};
-
-// Initialize last 7 days
-for (let i = 6; i >= 0; i--) {
-  const d = new Date();
-  d.setDate(today.getDate() - i);
-  const key = d.toISOString().split('T')[0];
-  last7DaysMap[key] = 0;
-}
-
-// Aggregate delivered orders
-orders.forEach(order => {
-  if (order.status !== 'delivered') return;
-
-  const [day, month, year] = order.date.split('/');
-  const dateObj = new Date(`${year}-${month}-${day}`);
-  const key = dateObj.toISOString().split('T')[0];
-
-  if (last7DaysMap.hasOwnProperty(key)) {
-    last7DaysMap[key] += order.total;
-  }
-});
-
-// Convert to chart format
-const weeklySpendData = Object.entries(last7DaysMap).map(([date, total]) => ({
-  date,
-  total
-}));
   if (!isHydrated) {
     return (
       <div className="min-h-screen bg-background">
@@ -619,6 +555,27 @@ const weeklySpendData = Object.entries(last7DaysMap).map(([date, total]) => ({
     </ResponsiveContainer>
   </div>
 </div>
+{/* Smart AI Insights */}
+<div className="glass-card rounded-2xl p-5 border border-purple-500/20 mb-6 animate-slide-up">
+  <h2 className="text-white font-semibold mb-4">🧠 Smart Insights</h2>
+
+  {insights.length === 0 ? (
+    <p className="text-white/40 text-sm">
+      Start ordering to unlock personalized insights.
+    </p>
+  ) : (
+    <div className="space-y-3">
+      {insights.map((insight, index) => (
+        <div
+          key={index}
+          className="px-4 py-3 bg-purple-500/10 border border-purple-500/20 rounded-xl text-sm text-purple-200"
+        >
+          {insight}
+        </div>
+      ))}
+    </div>
+  )}
+</div>
 {/* Order Type Distribution */}
 <div className="glass-card rounded-2xl p-5 border border-white/10 mb-6 animate-slide-up">
   <h2 className="text-white font-semibold mb-4">📦 Order Distribution</h2>
@@ -649,22 +606,22 @@ const weeklySpendData = Object.entries(last7DaysMap).map(([date, total]) => ({
   <div className="flex justify-center gap-6 mt-4 text-sm">
     <div className="flex items-center gap-2 text-orange-400">
       <span className="w-3 h-3 bg-orange-500 rounded-full"></span>
-      Food: {foodCount}
+      Food: {analytics?.food_orders ?? 0}
     </div>
     <div className="flex items-center gap-2 text-blue-400">
       <span className="w-3 h-3 bg-blue-500 rounded-full"></span>
-      Dark Store: {storeCount}
+      Dark Store: {analytics?.store_orders ?? 0}
     </div>
   </div>
 </div>
         {/* Summary Stats */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6 animate-slide-up">
           <div className="glass-card rounded-2xl p-4 border border-white/10 text-center">
-            <p className="text-2xl font-bold text-white">{deliveredCount}</p>
+            {analytics?.delivered_orders ?? 0}
             <p className="text-xs text-white/50 mt-1">Orders Delivered</p>
           </div>
           <div className="glass-card rounded-2xl p-4 border border-white/10 text-center">
-            <p className="text-2xl font-bold text-white">₹{totalSpent.toFixed(0)}</p>
+            <p className="text-2xl font-bold text-white">₹₹{analytics?.total_spent?.toFixed(0) ?? 0}</p>
             <p className="text-xs text-white/50 mt-1">Total Spent</p>
           </div>
           <div className="glass-card rounded-2xl p-4 border border-emerald-500/20 text-center">
@@ -673,10 +630,14 @@ const weeklySpendData = Object.entries(last7DaysMap).map(([date, total]) => ({
           </div>
           <div className="glass-card rounded-2xl p-4 border border-indigo-500/20 text-center">
   <p className="text-2xl font-bold text-indigo-400">
-    {avgDeliveryTime > 0 ? `${avgDeliveryTime} min` : '--'}
+    {analytics?.avg_delivery_time_minutes
+  ? `${Math.round(analytics.avg_delivery_time_minutes)} min`
+  : '--'}
   </p>
   <p className="text-xs text-white/50 mt-1">
-    Avg Delivery Time
+   {analytics?.avg_delivery_time_minutes
+  ? `${Math.round(analytics.avg_delivery_time_minutes)} min`
+  : '--'}
   </p>
 </div>
         </div>
