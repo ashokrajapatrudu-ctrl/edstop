@@ -39,28 +39,30 @@ const CheckoutModal = ({
   const [isProcessing, setIsProcessing] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
 
-  // Debug to see what modal actually receives
+  // Debug log
   useEffect(() => {
-    console.log('CheckoutModal received cart:', cartItems);
+    console.log('CheckoutModal cart received:', cartItems);
   }, [cartItems]);
 
   if (!isOpen) return null;
 
-  const remainingAmount = Math.max(0, total - walletAmount);
+  const subtotal = Array.isArray(cartItems)
+    ? cartItems.reduce(
+        (sum, item) =>
+          sum + Number(item.price) * Number(item.quantity),
+        0
+      )
+    : 0;
+
+  const remainingAmount = Math.max(0, subtotal - walletAmount);
 
   const handleConfirm = async () => {
     try {
       setIsProcessing(true);
       setErrorMessage('');
 
-      console.log('Confirm clicked');
-      console.log('Cart at confirm:', cartItems);
-
-      // 🔒 Safe validations
       if (!Array.isArray(cartItems) || cartItems.length === 0) {
-        throw new Error(
-          'Your cart is empty. Please add items before checkout.'
-        );
+        throw new Error('Your cart is empty.');
       }
 
       if (!restaurantId) {
@@ -76,7 +78,7 @@ const CheckoutModal = ({
       }
 
       if (walletAmount > walletBalance) {
-        throw new Error('Wallet exceeds available balance.');
+        throw new Error('Wallet exceeds balance.');
       }
 
       if (walletAmount > maxWalletRedemption) {
@@ -88,7 +90,7 @@ const CheckoutModal = ({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           cartItems,
-          totalAmount: total,
+          totalAmount: subtotal, // ✅ FIXED (only subtotal)
           restaurantId,
           paymentMethod,
           walletAmount,
@@ -100,8 +102,6 @@ const CheckoutModal = ({
 
       const data = await response.json();
 
-      console.log('API response:', data);
-
       if (!response.ok) {
         throw new Error(data.error || 'Order failed');
       }
@@ -109,6 +109,7 @@ const CheckoutModal = ({
       // Success
       onClose();
       window.location.href = `/orders/${data.orderId}`;
+
     } catch (error: any) {
       console.error('Checkout error:', error);
       setErrorMessage(error.message || 'Something went wrong.');
@@ -123,9 +124,8 @@ const CheckoutModal = ({
 
         <h2 className="text-lg font-bold mb-4">Checkout</h2>
 
-        {/* CART DEBUG DISPLAY */}
-        <div className="mb-4 text-xs text-gray-500">
-          Items in cart: {cartItems?.length || 0}
+        <div className="mb-2 text-sm text-gray-600">
+          Items: {cartItems?.length || 0}
         </div>
 
         {/* Payment Method */}
@@ -167,13 +167,17 @@ const CheckoutModal = ({
             onChange={(e) => setWalletAmount(Number(e.target.value))}
             className="w-full border p-2 rounded"
           />
+
+          <p className="text-xs text-gray-500 mt-1">
+            Max allowed: ₹{maxWalletRedemption.toFixed(2)}
+          </p>
         </div>
 
         {/* Summary */}
-        <div className="mb-4">
+        <div className="mb-4 border-t pt-3">
           <div className="flex justify-between">
-            <span>Total</span>
-            <span>₹{total.toFixed(2)}</span>
+            <span>Subtotal</span>
+            <span>₹{subtotal.toFixed(2)}</span>
           </div>
           <div className="flex justify-between font-bold">
             <span>To Pay</span>
