@@ -2,7 +2,7 @@
 
 import { createClient } from '@/lib/supabase/server';
 import DashboardUI from './DashboardUI';
-
+console.log(typeof supabase);
 export default async function DashboardShell() {
   const supabase = createClient();
 
