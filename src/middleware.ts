@@ -13,15 +13,15 @@ export async function middleware(request: NextRequest) {
           return request.cookies.getAll()
         },
         setAll(cookiesToSet) {
-          cookiesToSet.forEach(({ name, value, options }) =>
+          cookiesToSet.forEach(({ name, value, options }) => {
             response.cookies.set(name, value, options)
-          )
+          })
         },
       },
     }
   )
 
-  // 🔥 VERY IMPORTANT — do NOT use getUser()
+  // 🔥 Always use getSession() in middleware (NOT getUser)
   const {
     data: { session },
   } = await supabase.auth.getSession()
@@ -29,6 +29,7 @@ export async function middleware(request: NextRequest) {
   const user = session?.user ?? null
   const pathname = request.nextUrl.pathname
 
+  // Protect only these routes
   const protectedRoutes = [
     '/dashboard',
     '/food',
@@ -43,10 +44,12 @@ export async function middleware(request: NextRequest) {
     pathname.startsWith(route)
   )
 
+  // If not logged in and accessing protected route → redirect to login
   if (!user && isProtected) {
     return NextResponse.redirect(new URL('/login', request.url))
   }
 
+  // If logged in and trying to access login → redirect to dashboard
   if (user && pathname === '/login') {
     return NextResponse.redirect(
       new URL('/student-dashboard', request.url)
@@ -56,8 +59,15 @@ export async function middleware(request: NextRequest) {
   return response
 }
 
+// 🔥 IMPORTANT: Only match protected routes (DO NOT match everything)
 export const config = {
   matcher: [
-    '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
+    '/dashboard/:path*',
+    '/food/:path*',
+    '/store/:path*',
+    '/wallet/:path*',
+    '/ai/:path*',
+    '/rider/:path*',
+    '/admin/:path*',
   ],
 }
