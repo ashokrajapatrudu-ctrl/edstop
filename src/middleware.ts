@@ -2,38 +2,40 @@ import { createServerClient } from '@supabase/ssr';
 import { NextResponse, type NextRequest } from 'next/server';
 
 export async function middleware(request: NextRequest) {
-  let supabaseResponse = NextResponse.next({ request });
+  const response = NextResponse.next();
 
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
       cookies: {
-        getAll() {
-          return request.cookies.getAll();
+        get(name: string) {
+          return request.cookies.get(name)?.value;
         },
-        setAll(cookiesToSet) {
-          cookiesToSet.forEach(({ name, value, options }) => {
-            request.cookies.set(name, value);
-            supabaseResponse.cookies.set(name, value, options);
-          });
+        set(name: string, value: string, options: any) {
+          response.cookies.set(name, value, options);
+        },
+        remove(name: string, options: any) {
+          response.cookies.set(name, '', { ...options, maxAge: 0 });
         },
       },
     }
   );
 
+  // 🔥 IMPORTANT: refresh session first
   const {
-    data: { user },
-  } = await supabase.auth.getUser();
+    data: { session },
+  } = await supabase.auth.getSession();
 
-  // Redirect authenticated users away from login page
-  if (user && request.nextUrl.pathname === '/login') {
-    const url = request.nextUrl.clone();
-    url.pathname = '/student-dashboard';
-    return NextResponse.redirect(url);
+  const user = session?.user ?? null;
+
+  const pathname = request.nextUrl.pathname;
+
+  // Redirect logged-in users away from login page
+  if (user && pathname === '/login') {
+    return NextResponse.redirect(new URL('/student-dashboard', request.url));
   }
 
-  // Protected routes that require authentication
   const protectedRoutes = [
     '/dashboard',
     '/food',
@@ -44,62 +46,44 @@ export async function middleware(request: NextRequest) {
     '/admin',
   ];
 
-  const isProtectedRoute = protectedRoutes.some((route) =>
-    request.nextUrl.pathname.startsWith(route)
+  const isProtected = protectedRoutes.some(route =>
+    pathname.startsWith(route)
   );
 
-  // Redirect unauthenticated users to login
-  if (!user && isProtectedRoute) {
-    const url = request.nextUrl.clone();
-    url.pathname = '/login';
-    return NextResponse.redirect(url);
+  // 🔴 If not logged in and trying to access protected route
+  if (!user && isProtected) {
+    return NextResponse.redirect(new URL('/login', request.url));
   }
 
-  // Role-based access control
-  if (user && isProtectedRoute) {
-    // Get user role from database
-    const { data: userProfile } = await supabase
+  // Role-based logic
+  if (user && isProtected) {
+    const { data: profile } = await supabase
       .from('user_profiles')
       .select('role')
       .eq('id', user.id)
       .single();
 
-    const userRole = userProfile?.role || 'student';
-    const pathname = request.nextUrl.pathname;
+    const role = profile?.role ?? 'student';
 
-    // Student-only routes
-    const studentRoutes = ['/dashboard', '/food', '/store', '/wallet', '/ai'];
-    const isStudentRoute = studentRoutes.some((route) =>
-      pathname.startsWith(route)
-    );
-
-    // Rider-only routes
-    const isRiderRoute = pathname.startsWith('/rider');
-
-    // Admin-only routes
-    const isAdminRoute = pathname.startsWith('/admin');
-
-    // Check role permissions
-    if (isStudentRoute && userRole !== 'student') {
-      const url = request.nextUrl.clone();
-      url.pathname = '/';
-      return NextResponse.redirect(url);
+    if (pathname.startsWith('/admin') && role !== 'admin') {
+      return NextResponse.redirect(new URL('/', request.url));
     }
 
-    if (isRiderRoute && userRole !== 'rider') {
-      const url = request.nextUrl.clone();
-      url.pathname = '/';
-      return NextResponse.redirect(url);
+    if (pathname.startsWith('/rider') && role !== 'rider') {
+      return NextResponse.redirect(new URL('/', request.url));
     }
 
-    if (isAdminRoute && userRole !== 'admin') {
-      const url = request.nextUrl.clone();
-      url.pathname = '/';
-      return NextResponse.redirect(url);
+    if (
+      ['/dashboard', '/food', '/store', '/wallet', '/ai'].some(route =>
+        pathname.startsWith(route)
+      ) &&
+      role !== 'student'
+    ) {
+      return NextResponse.redirect(new URL('/', request.url));
     }
   }
 
-  return supabaseResponse;
+  return response;
 }
 
 export const config = {
