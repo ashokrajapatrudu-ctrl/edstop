@@ -883,13 +883,16 @@ const FoodOrderingInteractive = () => {
         </div>
       )}
 
-      <CheckoutModal
-        isOpen={isCheckoutOpen}
-        onClose={() => setIsCheckoutOpen(false)}
-        total={total}
-        walletBalance={walletBalance}
-        maxWalletRedemption={maxWalletRedemption}
-        onConfirmOrder={handleConfirmOrder} />
+     {/* Checkout Modal */}
+<CheckoutModal
+  isOpen={isCheckoutOpen}
+  onClose={() => setIsCheckoutOpen(false)}
+  total={total}
+  walletBalance={walletBalance}
+  maxWalletRedemption={maxWalletRedemption}
+  cartItems={cart}
+  restaurantId={selectedRestaurant as string}
+/>
 
       {orderDetails && (
         <OrderSuccessModal

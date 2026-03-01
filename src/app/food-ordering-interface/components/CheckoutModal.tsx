@@ -1,8 +1,16 @@
 'use client';
 
-import { useState } from 'react';
-import Icon from '@/components/ui/AppIcon';
+import { useState, useEffect } from 'react';
 import { createClient } from '@/lib/supabase/client';
+
+interface CartItem {
+  id: string;
+  name: string;
+  quantity: number;
+  price: number;
+  variantName?: string;
+  restaurantId: string;
+}
 
 interface CheckoutModalProps {
   isOpen: boolean;
@@ -10,7 +18,7 @@ interface CheckoutModalProps {
   total: number;
   walletBalance: number;
   maxWalletRedemption: number;
-  cartItems: any[];
+  cartItems: CartItem[];
   restaurantId: string;
 }
 
@@ -23,29 +31,56 @@ const CheckoutModal = ({
   cartItems,
   restaurantId,
 }: CheckoutModalProps) => {
-
   const supabase = createClient();
 
-  const [paymentMethod, setPaymentMethod] = useState<'razorpay' | 'cod'>('razorpay');
+  const [paymentMethod, setPaymentMethod] =
+    useState<'razorpay' | 'cod'>('razorpay');
   const [walletAmount, setWalletAmount] = useState(0);
   const [isProcessing, setIsProcessing] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
 
+  // Debug to see what modal actually receives
+  useEffect(() => {
+    console.log('CheckoutModal received cart:', cartItems);
+  }, [cartItems]);
+
   if (!isOpen) return null;
 
-  const remainingAmount = total - walletAmount;
+  const remainingAmount = Math.max(0, total - walletAmount);
 
   const handleConfirm = async () => {
-    setIsProcessing(true);
-    setErrorMessage('');
-
     try {
+      setIsProcessing(true);
+      setErrorMessage('');
+
+      console.log('Confirm clicked');
+      console.log('Cart at confirm:', cartItems);
+
+      // 🔒 Safe validations
+      if (!Array.isArray(cartItems) || cartItems.length === 0) {
+        throw new Error(
+          'Your cart is empty. Please add items before checkout.'
+        );
+      }
+
+      if (!restaurantId) {
+        throw new Error('Restaurant not selected.');
+      }
+
       const {
         data: { user },
       } = await supabase.auth.getUser();
 
       if (!user) {
-        throw new Error('User not logged in');
+        throw new Error('User not logged in.');
+      }
+
+      if (walletAmount > walletBalance) {
+        throw new Error('Wallet exceeds available balance.');
+      }
+
+      if (walletAmount > maxWalletRedemption) {
+        throw new Error('Wallet redemption limit exceeded.');
       }
 
       const response = await fetch('/api/orders/create', {
@@ -65,6 +100,8 @@ const CheckoutModal = ({
 
       const data = await response.json();
 
+      console.log('API response:', data);
+
       if (!response.ok) {
         throw new Error(data.error || 'Order failed');
       }
@@ -72,9 +109,9 @@ const CheckoutModal = ({
       // Success
       onClose();
       window.location.href = `/orders/${data.orderId}`;
-
     } catch (error: any) {
-      setErrorMessage(error.message || 'Something went wrong');
+      console.error('Checkout error:', error);
+      setErrorMessage(error.message || 'Something went wrong.');
     } finally {
       setIsProcessing(false);
     }
@@ -86,6 +123,12 @@ const CheckoutModal = ({
 
         <h2 className="text-lg font-bold mb-4">Checkout</h2>
 
+        {/* CART DEBUG DISPLAY */}
+        <div className="mb-4 text-xs text-gray-500">
+          Items in cart: {cartItems?.length || 0}
+        </div>
+
+        {/* Payment Method */}
         <div className="mb-4">
           <label className="block mb-2 font-medium">Payment Method</label>
 
@@ -110,6 +153,7 @@ const CheckoutModal = ({
           </div>
         </div>
 
+        {/* Wallet */}
         <div className="mb-4">
           <label className="block mb-2 font-medium">
             Use Wallet (Balance ₹{walletBalance})
@@ -125,6 +169,7 @@ const CheckoutModal = ({
           />
         </div>
 
+        {/* Summary */}
         <div className="mb-4">
           <div className="flex justify-between">
             <span>Total</span>
@@ -147,7 +192,9 @@ const CheckoutModal = ({
           disabled={isProcessing}
           className="w-full bg-black text-white py-3 rounded"
         >
-          {isProcessing ? 'Processing...' : `Confirm & Pay ₹${remainingAmount.toFixed(2)}`}
+          {isProcessing
+            ? 'Processing...'
+            : `Confirm & Pay ₹${remainingAmount.toFixed(2)}`}
         </button>
 
       </div>
