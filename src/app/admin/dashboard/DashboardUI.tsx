@@ -23,7 +23,7 @@ export default function DashboardUI({
   riderLifetime,
 }: any) {
   return (
-    <div className="min-h-screen bg-gray-50 p-8 space-y-8">
+    <div className="min-h-screen bg-gray-100 p-8 space-y-8">
       <h1 className="text-4xl font-bold">Admin Dashboard</h1>
 
       {/* KPI Cards */}
@@ -70,7 +70,7 @@ export default function DashboardUI({
 
 function Card({ title, value }: any) {
   return (
-    <div className="bg-white shadow rounded-xl p-6">
+   <div className="bg-white shadow-lg rounded-xl p-6 border border-gray-200">
       <p className="text-gray-500 text-sm">{title}</p>
       <p className="text-2xl font-bold">{value}</p>
     </div>
@@ -79,7 +79,7 @@ function Card({ title, value }: any) {
 
 function ChartCard({ title, data, dataKey, xKey, color }: any) {
   return (
-    <div className="bg-white shadow rounded-xl p-6">
+    <div className="bg-white shadow-lg rounded-xl p-6 border border-gray-200">
       <h2 className="text-xl font-semibold mb-4">{title}</h2>
       <div style={{ width: '100%', height: 300 }}>
         <ResponsiveContainer>
