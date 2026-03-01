@@ -1,6 +1,8 @@
 'use client';
 
 import {
+  AreaChart,
+  Area,
   LineChart,
   Line,
   XAxis,
@@ -10,6 +12,7 @@ import {
   ResponsiveContainer,
 } from 'recharts';
 import Link from 'next/link';
+import { useEffect, useState } from 'react';
 
 export default function DashboardUI({
   range,
@@ -58,7 +61,7 @@ export default function DashboardUI({
           Executive Financial Dashboard
         </h1>
         <p className="text-indigo-100 mt-2">
-          Real-time marketplace intelligence
+          Marketplace Intelligence Engine
         </p>
       </div>
 
@@ -79,14 +82,15 @@ export default function DashboardUI({
         ))}
       </div>
 
-      {/* KPI CARDS */}
+      {/* KPI GRID */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-        <KPI title="Total Revenue" value={`₹${overview?.total_revenue ?? 0}`} />
+        <KPI title="Total Revenue" value={overview?.total_revenue ?? 0} />
         <KPI title="Delivered Orders" value={overview?.total_delivered_orders ?? 0} />
         <KPI title="Cancelled Orders" value={overview?.total_cancelled_orders ?? 0} />
         <KPI
           title="Profit Margin"
-          value={`${financialSummary?.profit_margin_percent || 0}%`}
+          value={financialSummary?.profit_margin_percent ?? 0}
+          suffix="%"
           highlight="text-indigo-400"
         />
       </div>
@@ -94,13 +98,13 @@ export default function DashboardUI({
       {/* FINANCIAL SUMMARY */}
       <Section title="Financial Summary">
         <div className="grid grid-cols-2 md:grid-cols-3 gap-6">
-          <KPI title="Gross Revenue" value={`₹${Math.round(financialSummary?.total_gross_revenue || 0)}`} />
-          <KPI title="Commission Revenue" value={`₹${Math.round(financialSummary?.total_commission_revenue || 0)}`} />
-          <KPI title="Restaurant Payout" value={`₹${Math.round(financialSummary?.total_restaurant_payout || 0)}`} />
-          <KPI title="Rider Cost" value={`₹${Math.round(financialSummary?.total_rider_cost || 0)}`} />
+          <KPI title="Gross Revenue" value={financialSummary?.total_gross_revenue ?? 0} />
+          <KPI title="Commission Revenue" value={financialSummary?.total_commission_revenue ?? 0} />
+          <KPI title="Restaurant Payout" value={financialSummary?.total_restaurant_payout ?? 0} />
+          <KPI title="Rider Cost" value={financialSummary?.total_rider_cost ?? 0} />
           <KPI
             title="Net Platform Profit"
-            value={`₹${Math.round(financialSummary?.net_platform_profit || 0)}`}
+            value={financialSummary?.net_platform_profit ?? 0}
             highlight={
               financialSummary?.net_platform_profit > 0
                 ? 'text-green-400'
@@ -110,22 +114,29 @@ export default function DashboardUI({
         </div>
       </Section>
 
-      {/* DAILY REVENUE CHART */}
-      <Section title="Daily Revenue Trend">
-        <div style={{ width: '100%', height: 320 }}>
+      {/* AREA CHART (Premium) */}
+      <Section title="Revenue Trend">
+        <div style={{ width: '100%', height: 350 }}>
           <ResponsiveContainer>
-            <LineChart data={dailyRevenue}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
+            <AreaChart data={dailyRevenue}>
+              <defs>
+                <linearGradient id="colorRev" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="#6366f1" stopOpacity={0.8}/>
+                  <stop offset="95%" stopColor="#6366f1" stopOpacity={0}/>
+                </linearGradient>
+              </defs>
+              <CartesianGrid stroke="#334155" />
               <XAxis dataKey="day" stroke="#94a3b8" />
               <YAxis stroke="#94a3b8" />
               <Tooltip />
-              <Line
+              <Area
                 type="monotone"
                 dataKey="total_revenue"
                 stroke="#6366f1"
-                strokeWidth={3}
+                fillOpacity={1}
+                fill="url(#colorRev)"
               />
-            </LineChart>
+            </AreaChart>
           </ResponsiveContainer>
         </div>
       </Section>
@@ -183,18 +194,40 @@ export default function DashboardUI({
   );
 }
 
-/* COMPONENTS */
+/* KPI WITH COUNT-UP ANIMATION */
 
-function KPI({ title, value, highlight }: any) {
+function KPI({ title, value, suffix = '', highlight }: any) {
+  const [displayValue, setDisplayValue] = useState(0);
+
+  useEffect(() => {
+    let start = 0;
+    const duration = 800;
+    const increment = value / (duration / 16);
+
+    const counter = setInterval(() => {
+      start += increment;
+      if (start >= value) {
+        setDisplayValue(value);
+        clearInterval(counter);
+      } else {
+        setDisplayValue(Math.floor(start));
+      }
+    }, 16);
+
+    return () => clearInterval(counter);
+  }, [value]);
+
   return (
     <div className="bg-[#1e293b] rounded-xl p-6 border border-gray-700 shadow-lg">
       <p className="text-gray-400 text-sm mb-2">{title}</p>
       <p className={`text-2xl font-bold ${highlight || 'text-white'}`}>
-        {value}
+        ₹{displayValue}{suffix}
       </p>
     </div>
   );
 }
+
+/* SECTION WRAPPER */
 
 function Section({ title, children }: any) {
   return (
@@ -206,6 +239,8 @@ function Section({ title, children }: any) {
     </div>
   );
 }
+
+/* TABLE */
 
 function DataTable({ headers, rows }: any) {
   return (
