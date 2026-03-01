@@ -129,6 +129,35 @@ export default async function DashboardShell({
     (a: any, b: any) => b.net_profit - a.net_profit
   );
 
+  // ================= RIDER PERFORMANCE =================
+
+  const riderMap: any = {};
+
+  breakdown.forEach((order: any) => {
+    const rider = order.rider_id || 'Unknown';
+
+    if (!riderMap[rider]) {
+      riderMap[rider] = {
+        rider,
+        deliveries: 0,
+        total_earned: 0,
+      };
+    }
+
+    riderMap[rider].deliveries += 1;
+    riderMap[rider].total_earned += order.rider_cost || 0;
+  });
+
+  const riderData = Object.values(riderMap)
+    .map((r: any) => ({
+      ...r,
+      avg_per_order:
+        r.deliveries > 0
+          ? (r.total_earned / r.deliveries).toFixed(2)
+          : 0,
+    }))
+    .sort((a: any, b: any) => b.total_earned - a.total_earned);
+
   return (
     <DashboardUI
       range={range}
@@ -144,6 +173,7 @@ export default async function DashboardShell({
       }}
       weeklyData={weeklyData}
       restaurantData={restaurantData}
+      riderData={riderData}
     />
   );
 }

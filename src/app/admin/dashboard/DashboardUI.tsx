@@ -18,17 +18,13 @@ export default function DashboardUI({
   financialSummary,
   weeklyData,
   restaurantData,
+  riderData,
 }: any) {
 
   const downloadCSV = () => {
-    if (!weeklyData || weeklyData.length === 0) return;
+    if (!weeklyData?.length) return;
 
-    const headers = [
-      'Week',
-      'Restaurant Payout',
-      'Rider Cost',
-      'Net Profit',
-    ];
+    const headers = ['Week','Restaurant Payout','Rider Cost','Net Profit'];
 
     const rows = weeklyData.map((w: any) => [
       w.week,
@@ -60,7 +56,7 @@ export default function DashboardUI({
 
       {/* Range Buttons */}
       <div className="flex gap-3">
-        {[7, 30, 90].map((r) => (
+        {[7,30,90].map((r) => (
           <Link
             key={r}
             href={`/admin/dashboard?range=${r}`}
@@ -75,7 +71,7 @@ export default function DashboardUI({
         ))}
       </div>
 
-      {/* KPI Cards */}
+      {/* KPI */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
         <Card title="Total Revenue" value={`₹${overview?.total_revenue ?? 0}`} />
         <Card title="Delivered Orders" value={overview?.total_delivered_orders ?? 0} />
@@ -85,7 +81,7 @@ export default function DashboardUI({
 
       {/* Financial Summary */}
       <div className="grid grid-cols-2 md:grid-cols-3 gap-6">
-        <Card title="Total Gross Revenue" value={`₹${Math.round(financialSummary?.total_gross_revenue || 0)}`} />
+        <Card title="Gross Revenue" value={`₹${Math.round(financialSummary?.total_gross_revenue || 0)}`} />
         <Card title="Commission Revenue" value={`₹${Math.round(financialSummary?.total_commission_revenue || 0)}`} />
         <Card title="Restaurant Payout" value={`₹${Math.round(financialSummary?.total_restaurant_payout || 0)}`} />
         <Card title="Rider Cost" value={`₹${Math.round(financialSummary?.total_rider_cost || 0)}`} />
@@ -109,9 +105,8 @@ export default function DashboardUI({
       </div>
 
       {/* Weekly Settlement */}
-      <div className="bg-white shadow-lg rounded-xl p-6 border border-gray-200">
-        <div className="flex justify-between items-center mb-4">
-          <h2 className="text-xl font-semibold">Weekly Settlement Overview</h2>
+      <Section title="Weekly Settlement Overview">
+        <div className="flex justify-end mb-4">
           <button
             onClick={downloadCSV}
             className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg"
@@ -120,59 +115,43 @@ export default function DashboardUI({
           </button>
         </div>
 
-        <table className="w-full text-left">
-          <thead>
-            <tr className="border-b">
-              <th className="py-2">Week</th>
-              <th className="py-2">Restaurant Payout</th>
-              <th className="py-2">Rider Cost</th>
-              <th className="py-2">Net Profit</th>
-            </tr>
-          </thead>
-          <tbody>
-            {weeklyData?.map((w: any) => (
-              <tr key={w.week} className="border-b">
-                <td className="py-2">{w.week}</td>
-                <td className="py-2">₹{Math.round(w.restaurant_payout)}</td>
-                <td className="py-2">₹{Math.round(w.rider_cost)}</td>
-                <td className={`py-2 font-semibold ${w.net_profit > 0 ? 'text-green-600' : 'text-red-600'}`}>
-                  ₹{Math.round(w.net_profit)}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+        <Table
+          headers={['Week','Restaurant Payout','Rider Cost','Net Profit']}
+          rows={weeklyData?.map((w:any)=>[
+            w.week,
+            `₹${Math.round(w.restaurant_payout)}`,
+            `₹${Math.round(w.rider_cost)}`,
+            `₹${Math.round(w.net_profit)}`
+          ])}
+        />
+      </Section>
 
       {/* Restaurant Profitability */}
-      <div className="bg-white shadow-lg rounded-xl p-6 border border-gray-200">
-        <h2 className="text-xl font-semibold mb-4">Restaurant Profitability Breakdown</h2>
+      <Section title="Restaurant Profitability Breakdown">
+        <Table
+          headers={['Restaurant','Orders','Gross','Commission','Net Profit']}
+          rows={restaurantData?.map((r:any)=>[
+            r.restaurant,
+            r.orders,
+            `₹${Math.round(r.gross)}`,
+            `₹${Math.round(r.commission)}`,
+            `₹${Math.round(r.net_profit)}`
+          ])}
+        />
+      </Section>
 
-        <table className="w-full text-left">
-          <thead>
-            <tr className="border-b">
-              <th className="py-2">Restaurant</th>
-              <th className="py-2">Orders</th>
-              <th className="py-2">Gross Revenue</th>
-              <th className="py-2">Commission</th>
-              <th className="py-2">Net Profit</th>
-            </tr>
-          </thead>
-          <tbody>
-            {restaurantData?.map((r: any) => (
-              <tr key={r.restaurant} className="border-b">
-                <td className="py-2">{r.restaurant}</td>
-                <td className="py-2">{r.orders}</td>
-                <td className="py-2">₹{Math.round(r.gross)}</td>
-                <td className="py-2">₹{Math.round(r.commission)}</td>
-                <td className={`py-2 font-semibold ${r.net_profit > 0 ? 'text-green-600' : 'text-red-600'}`}>
-                  ₹{Math.round(r.net_profit)}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+      {/* Rider Performance */}
+      <Section title="Rider Performance Overview">
+        <Table
+          headers={['Rider','Deliveries','Total Earned','Avg / Order']}
+          rows={riderData?.map((r:any)=>[
+            r.rider,
+            r.deliveries,
+            `₹${Math.round(r.total_earned)}`,
+            `₹${r.avg_per_order}`
+          ])}
+        />
+      </Section>
 
     </div>
   );
@@ -184,5 +163,33 @@ function Card({ title, value }: any) {
       <p className="text-gray-500 text-sm">{title}</p>
       <p className="text-2xl font-bold">{value}</p>
     </div>
+  );
+}
+
+function Section({ title, children }: any) {
+  return (
+    <div className="bg-white shadow-lg rounded-xl p-6 border border-gray-200">
+      <h2 className="text-xl font-semibold mb-4">{title}</h2>
+      {children}
+    </div>
+  );
+}
+
+function Table({ headers, rows }: any) {
+  return (
+    <table className="w-full text-left">
+      <thead>
+        <tr className="border-b">
+          {headers.map((h:any)=><th key={h} className="py-2">{h}</th>)}
+        </tr>
+      </thead>
+      <tbody>
+        {rows?.map((row:any,i:number)=>(
+          <tr key={i} className="border-b">
+            {row.map((cell:any,j:number)=><td key={j} className="py-2">{cell}</td>)}
+          </tr>
+        ))}
+      </tbody>
+    </table>
   );
 }
