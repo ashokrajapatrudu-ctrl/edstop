@@ -1,33 +1,23 @@
-import { createServerClient } from '@supabase/ssr';
-import { cookies } from 'next/headers';
+// src/app/admin/dashboard/DashboardShell.tsx
+
+import { createClient } from '@/lib/supabase/server';
 import DashboardUI from './DashboardUI';
 
 export default async function DashboardShell() {
-  const cookieStore = cookies();
-
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        getAll() {
-          return cookieStore.getAll();
-        },
-        setAll() {},
-      },
-    }
-  );
+  const supabase = createClient();
 
   const [
     overviewRes,
     monthlyRes,
     dailyRes,
     profitRes,
+    financialSummaryRes
   ] = await Promise.all([
     supabase.from('admin_platform_overview').select('*').single(),
     supabase.from('admin_monthly_revenue').select('*'),
     supabase.from('admin_daily_revenue').select('*'),
     supabase.from('admin_platform_profit').select('*').single(),
+    supabase.from('admin_financial_summary').select('*').single(),
   ]);
 
   return (
@@ -36,6 +26,7 @@ export default async function DashboardShell() {
       monthlyRevenue={monthlyRes.data || []}
       dailyRevenue={dailyRes.data || []}
       profitData={profitRes.data}
+      financialSummary={financialSummaryRes.data}
     />
   );
 }

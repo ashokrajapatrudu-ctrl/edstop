@@ -15,18 +15,14 @@ export default function DashboardUI({
   overview,
   monthlyRevenue,
   dailyRevenue,
-  profitOverview,
   profitData,
-  monthlyProfit,
-  topProducts,
-  topRestaurants,
-  riderLifetime,
+  financialSummary
 }: any) {
   return (
     <div className="min-h-screen bg-gray-100 p-8 space-y-8">
       <h1 className="text-4xl font-bold">Admin Dashboard</h1>
 
-      {/* KPI Cards */}
+      {/* Primary KPI Cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
         <Card title="Total Revenue" value={`₹${overview?.total_revenue ?? 0}`} />
         <Card title="Delivered Orders" value={overview?.total_delivered_orders ?? 0} />
@@ -39,6 +35,34 @@ export default function DashboardUI({
             (profitData?.rider_paid || 0) -
             (profitData?.restaurant_paid || 0)
           }`}
+        />
+      </div>
+
+      {/* Financial Summary Section */}
+      <div className="grid grid-cols-2 md:grid-cols-3 gap-6">
+        <Card
+          title="Total Gross Revenue"
+          value={`₹${Math.round(financialSummary?.total_gross_revenue || 0)}`}
+        />
+        <Card
+          title="Commission Revenue"
+          value={`₹${Math.round(financialSummary?.total_commission_revenue || 0)}`}
+        />
+        <Card
+          title="Restaurant Payout Due"
+          value={`₹${Math.round(financialSummary?.total_restaurant_payout || 0)}`}
+        />
+        <Card
+          title="Rider Cost"
+          value={`₹${Math.round(financialSummary?.total_rider_cost || 0)}`}
+        />
+        <Card
+          title="Net Platform Profit (Real)"
+          value={`₹${Math.round(financialSummary?.net_platform_profit || 0)}`}
+        />
+        <Card
+          title="Profit Margin"
+          value={`${financialSummary?.profit_margin_percent || 0}%`}
         />
       </div>
 
@@ -70,7 +94,7 @@ export default function DashboardUI({
 
 function Card({ title, value }: any) {
   return (
-   <div className="bg-white shadow-lg rounded-xl p-6 border border-gray-200">
+    <div className="bg-white shadow-lg rounded-xl p-6 border border-gray-200">
       <p className="text-gray-500 text-sm">{title}</p>
       <p className="text-2xl font-bold">{value}</p>
     </div>
