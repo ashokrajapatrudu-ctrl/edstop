@@ -3,263 +3,93 @@
 import {
   AreaChart,
   Area,
-  LineChart,
-  Line,
+  ResponsiveContainer,
   XAxis,
   YAxis,
   Tooltip,
   CartesianGrid,
-  ResponsiveContainer,
 } from 'recharts';
-import Link from 'next/link';
-import { useEffect, useState, useMemo } from 'react';
+import { useState, useEffect } from 'react';
 
 export default function DashboardUI({
-  range,
-  overview,
-  dailyRevenue,
-  financialSummary,
-  weeklyData,
-  restaurantData,
-  riderData,
+  totals,
+  forecast,
+  anomalies,
+  orderCount,
 }: any) {
 
-  /* ============================= */
-  /* ======= SIMULATORS ========= */
-  /* ============================= */
+  const [autoRefresh, setAutoRefresh] = useState(false);
 
-  const [commissionRate, setCommissionRate] = useState(0);
-  const [riderBonus, setRiderBonus] = useState(0);
-
-  const simulatedProfit = useMemo(() => {
-    if (!financialSummary) return 0;
-
-    const gross = financialSummary.total_gross_revenue || 0;
-    const baseProfit = financialSummary.net_platform_profit || 0;
-
-    const commissionImpact = (gross * commissionRate) / 100;
-    const riderImpact = riderBonus;
-
-    return baseProfit + commissionImpact - riderImpact;
-  }, [commissionRate, riderBonus, financialSummary]);
-
-  /* ============================= */
-  /* ======= FORECASTING ========= */
-  /* ============================= */
-
-  const forecastData = useMemo(() => {
-    if (!dailyRevenue?.length) return [];
-
-    const avg =
-      dailyRevenue.reduce((sum: number, d: any) => sum + d.total_revenue, 0) /
-      dailyRevenue.length;
-
-    const projection = [];
-
-    for (let i = 1; i <= 30; i++) {
-      projection.push({
-        day: `+${i}`,
-        total_revenue: Math.round(avg),
-      });
-    }
-
-    return projection;
-  }, [dailyRevenue]);
-
-  /* ============================= */
-  /* ======= CSV EXPORT ========= */
-  /* ============================= */
-
-  const downloadCSV = () => {
-    if (!weeklyData?.length) return;
-
-    const headers = ['Week','Restaurant Payout','Rider Cost','Net Profit'];
-
-    const rows = weeklyData.map((w: any) => [
-      w.week,
-      w.restaurant_payout,
-      w.rider_cost,
-      w.net_profit,
-    ]);
-
-    const csvContent =
-      [headers, ...rows]
-        .map((e) => e.join(','))
-        .join('\n');
-
-    const blob = new Blob([csvContent], {
-      type: 'text/csv;charset=utf-8;',
-    });
-
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `weekly_settlement_${range}d.csv`;
-    link.click();
-  };
+  useEffect(() => {
+    if (!autoRefresh) return;
+    const interval = setInterval(() => {
+      window.location.reload();
+    }, 20000);
+    return () => clearInterval(interval);
+  }, [autoRefresh]);
 
   return (
-    <div className="min-h-screen bg-[#0f172a] text-gray-200 p-10 space-y-12">
+    <div className="min-h-screen bg-[#0f172a] text-gray-200 p-10 space-y-10">
 
-      {/* HEADER */}
-      <div className="bg-gradient-to-r from-indigo-600 to-purple-600 text-white p-8 rounded-2xl shadow-2xl">
-        <h1 className="text-4xl font-bold">Executive Intelligence Dashboard</h1>
-        <p className="text-indigo-100 mt-2">Marketplace Control Center</p>
+      <div className="flex justify-between items-center">
+        <h1 className="text-3xl font-bold text-white">
+          EdStop Intelligence Engine
+        </h1>
+
+        <button
+          onClick={() => setAutoRefresh(!autoRefresh)}
+          className="bg-indigo-600 px-4 py-2 rounded-lg"
+        >
+          {autoRefresh ? "Auto Refresh ON" : "Enable Auto Refresh"}
+        </button>
       </div>
 
-      {/* KPI */}
+      {/* KPI GRID */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-        <KPI title="Total Revenue" value={overview?.total_revenue ?? 0} />
-        <KPI title="Delivered Orders" value={overview?.total_delivered_orders ?? 0} />
-        <KPI title="Profit Margin" value={financialSummary?.profit_margin_percent ?? 0} suffix="%" />
-        <KPI
-          title="Net Platform Profit"
-          value={financialSummary?.net_platform_profit ?? 0}
-          highlight={
-            financialSummary?.net_platform_profit > 0
-              ? 'text-green-400'
-              : 'text-red-400'
-          }
-        />
+        <Card title="Gross Revenue" value={totals.totalGross} />
+        <Card title="Net Profit" value={totals.netProfit} />
+        <Card title="Avg Order Value" value={totals.avgOrderValue} />
+        <Card title="Contribution Margin %" value={totals.contributionMargin} />
       </div>
-
-      {/* REVENUE TREND */}
-      <Section title="Revenue Trend (Actual)">
-        <ChartArea data={dailyRevenue} />
-      </Section>
 
       {/* FORECAST */}
-      <Section title="30-Day Revenue Projection">
-        <ChartArea data={forecastData} />
+      <Section title="30-Day Forecast Projection">
+        <Chart data={forecast} />
       </Section>
 
-      {/* SIMULATOR */}
-      <Section title="Contribution Margin Simulator">
-        <div className="space-y-6">
-
-          <div>
-            <label className="block text-gray-400 mb-2">
-              Increase Commission (%)
-            </label>
-            <input
-              type="range"
-              min="0"
-              max="10"
-              value={commissionRate}
-              onChange={(e) => setCommissionRate(Number(e.target.value))}
-              className="w-full"
-            />
-            <p className="mt-1 text-indigo-400">
-              +{commissionRate}% commission
-            </p>
-          </div>
-
-          <div>
-            <label className="block text-gray-400 mb-2">
-              Rider Bonus Cost (₹)
-            </label>
-            <input
-              type="range"
-              min="0"
-              max="5000"
-              step="500"
-              value={riderBonus}
-              onChange={(e) => setRiderBonus(Number(e.target.value))}
-              className="w-full"
-            />
-            <p className="mt-1 text-indigo-400">
-              ₹{riderBonus} bonus payout
-            </p>
-          </div>
-
-          <div className="text-2xl font-bold">
-            Simulated Profit:{" "}
-            <span className={simulatedProfit > 0 ? "text-green-400" : "text-red-400"}>
-              ₹{Math.round(simulatedProfit)}
-            </span>
-          </div>
-
-        </div>
+      {/* UNIT ECONOMICS */}
+      <Section title="Unit Economics">
+        <p>Total Orders: {orderCount}</p>
+        <p>Commission Revenue: ₹{totals.totalCommission}</p>
+        <p>Restaurant Payout: ₹{totals.totalRestaurant}</p>
+        <p>Rider Cost: ₹{totals.totalRider}</p>
       </Section>
 
-      {/* WEEKLY */}
-      <Section title="Weekly Settlement">
-        <div className="flex justify-end mb-4">
-          <button
-            onClick={downloadCSV}
-            className="bg-indigo-600 px-5 py-2 rounded-lg"
-          >
-            Download CSV
-          </button>
-        </div>
-
-        <DataTable
-          headers={['Week','Restaurant Payout','Rider Cost','Net Profit']}
-          rows={weeklyData?.map((w:any)=>[
-            w.week,
-            `₹${Math.round(w.restaurant_payout)}`,
-            `₹${Math.round(w.rider_cost)}`,
-            `₹${Math.round(w.net_profit)}`
-          ])}
-        />
-      </Section>
-
-      {/* RESTAURANTS */}
-      <Section title="Restaurant Profitability">
-        <DataTable
-          headers={['Restaurant','Orders','Net Profit']}
-          rows={restaurantData?.map((r:any)=>[
-            r.restaurant,
-            r.orders,
-            `₹${Math.round(r.net_profit)}`
-          ])}
-        />
-      </Section>
-
-      {/* RIDERS */}
-      <Section title="Rider Performance">
-        <DataTable
-          headers={['Rider','Deliveries','Total Earned']}
-          rows={riderData?.map((r:any)=>[
-            r.rider,
-            r.deliveries,
-            `₹${Math.round(r.total_earned)}`
-          ])}
-        />
+      {/* ANOMALIES */}
+      <Section title="Revenue Anomalies Detected">
+        {anomalies.length === 0 ? (
+          <p>No abnormal spikes detected</p>
+        ) : (
+          anomalies.map((a: any, i: number) => (
+            <div key={i} className="text-red-400">
+              {a.day} → ₹{a.value}
+            </div>
+          ))
+        )}
       </Section>
 
     </div>
   );
 }
 
-/* ================= COMPONENTS ================= */
+/* COMPONENTS */
 
-function KPI({ title, value, suffix = '', highlight }: any) {
-  const [displayValue, setDisplayValue] = useState(0);
-
-  useEffect(() => {
-    let start = 0;
-    const duration = 800;
-    const increment = value / (duration / 16);
-
-    const counter = setInterval(() => {
-      start += increment;
-      if (start >= value) {
-        setDisplayValue(value);
-        clearInterval(counter);
-      } else {
-        setDisplayValue(Math.floor(start));
-      }
-    }, 16);
-
-    return () => clearInterval(counter);
-  }, [value]);
-
+function Card({ title, value }: any) {
   return (
     <div className="bg-[#1e293b] p-6 rounded-xl border border-gray-700">
       <p className="text-gray-400 text-sm mb-2">{title}</p>
-      <p className={`text-2xl font-bold ${highlight || 'text-white'}`}>
-        ₹{displayValue}{suffix}
+      <p className="text-2xl font-bold text-white">
+        ₹{Math.round(value)}
       </p>
     </div>
   );
@@ -274,17 +104,11 @@ function Section({ title, children }: any) {
   );
 }
 
-function ChartArea({ data }: any) {
+function Chart({ data }: any) {
   return (
-    <div style={{ width: '100%', height: 350 }}>
+    <div style={{ width: '100%', height: 300 }}>
       <ResponsiveContainer>
         <AreaChart data={data}>
-          <defs>
-            <linearGradient id="colorRev" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="5%" stopColor="#6366f1" stopOpacity={0.8}/>
-              <stop offset="95%" stopColor="#6366f1" stopOpacity={0}/>
-            </linearGradient>
-          </defs>
           <CartesianGrid stroke="#334155" />
           <XAxis dataKey="day" stroke="#94a3b8" />
           <YAxis stroke="#94a3b8" />
@@ -293,40 +117,11 @@ function ChartArea({ data }: any) {
             type="monotone"
             dataKey="total_revenue"
             stroke="#6366f1"
-            fillOpacity={1}
-            fill="url(#colorRev)"
+            fill="#6366f1"
+            fillOpacity={0.2}
           />
         </AreaChart>
       </ResponsiveContainer>
-    </div>
-  );
-}
-
-function DataTable({ headers, rows }: any) {
-  return (
-    <div className="overflow-x-auto">
-      <table className="w-full text-left">
-        <thead>
-          <tr className="border-b border-gray-700 bg-[#0f172a]">
-            {headers.map((h:any)=>
-              <th key={h} className="py-3 px-3 text-sm text-gray-400">
-                {h}
-              </th>
-            )}
-          </tr>
-        </thead>
-        <tbody>
-          {rows?.map((row:any,i:number)=>(
-            <tr key={i} className="border-b border-gray-800 hover:bg-[#273449] transition">
-              {row.map((cell:any,j:number)=>
-                <td key={j} className="py-3 px-3 text-gray-200">
-                  {cell}
-                </td>
-              )}
-            </tr>
-          ))}
-        </tbody>
-      </table>
     </div>
   );
 }

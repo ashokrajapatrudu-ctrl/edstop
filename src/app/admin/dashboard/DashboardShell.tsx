@@ -1,5 +1,3 @@
-// src/app/admin/dashboard/DashboardShell.tsx
-
 import { createClient } from '@/lib/supabase/server';
 import DashboardUI from './DashboardUI';
 
@@ -13,167 +11,71 @@ export default async function DashboardShell({
   const dateLimit = new Date();
   dateLimit.setDate(dateLimit.getDate() - range);
 
-  const [overviewRes, dailyRes, breakdownRes] = await Promise.all([
-    supabase
-      .from('admin_platform_overview')
-      .select('*')
-      .maybeSingle(),
-
-    supabase
-      .from('admin_daily_revenue')
-      .select('*')
-      .gte('day', dateLimit.toISOString()),
-
-    supabase
-      .from('admin_financial_breakdown')
-      .select('*')
-      .gte('created_at', dateLimit.toISOString()),
-  ]);
+  const breakdownRes = await supabase
+    .from('admin_financial_breakdown')
+    .select('*')
+    .gte('created_at', dateLimit.toISOString());
 
   const breakdown = breakdownRes.data || [];
 
-  // ================= FINANCIAL SUMMARY =================
+  /* ================= TOTALS ================= */
 
-  const totalGrossRevenue = breakdown.reduce(
-    (sum: number, o: any) => sum + (o.gross_revenue || 0),
-    0
-  );
+  const totalGross = breakdown.reduce((s, o) => s + (o.gross_revenue || 0), 0);
+  const totalCommission = breakdown.reduce((s, o) => s + (o.platform_commission || 0), 0);
+  const totalRider = breakdown.reduce((s, o) => s + (o.rider_cost || 0), 0);
+  const totalRestaurant = breakdown.reduce((s, o) => s + (o.restaurant_payout || 0), 0);
+  const netProfit = breakdown.reduce((s, o) => s + (o.net_platform_profit || 0), 0);
 
-  const totalCommissionRevenue = breakdown.reduce(
-    (sum: number, o: any) => sum + (o.platform_commission || 0),
-    0
-  );
+  const avgOrderValue =
+    breakdown.length > 0 ? totalGross / breakdown.length : 0;
 
-  const totalRestaurantPayout = breakdown.reduce(
-    (sum: number, o: any) => sum + (o.restaurant_payout || 0),
-    0
-  );
+  const contributionMargin =
+    totalGross > 0 ? ((netProfit / totalGross) * 100).toFixed(2) : 0;
 
-  const totalRiderCost = breakdown.reduce(
-    (sum: number, o: any) => sum + (o.rider_cost || 0),
-    0
-  );
+  /* ================= ANOMALY DETECTION ================= */
 
-  const netPlatformProfit = breakdown.reduce(
-    (sum: number, o: any) => sum + (o.net_platform_profit || 0),
-    0
-  );
-
-  const profitMarginPercent =
-    totalGrossRevenue > 0
-      ? Number(
-          ((netPlatformProfit / totalGrossRevenue) * 100).toFixed(2)
-        )
-      : 0;
-
-  // ================= WEEKLY GROUPING =================
-
-  const weeklyMap: any = {};
-
-  breakdown.forEach((order: any) => {
-    const week = new Date(order.created_at);
-    week.setDate(week.getDate() - week.getDay());
-    const weekKey = week.toISOString().split('T')[0];
-
-    if (!weeklyMap[weekKey]) {
-      weeklyMap[weekKey] = {
-        week: weekKey,
-        restaurant_payout: 0,
-        rider_cost: 0,
-        net_profit: 0,
-      };
-    }
-
-    weeklyMap[weekKey].restaurant_payout +=
-      order.restaurant_payout || 0;
-
-    weeklyMap[weekKey].rider_cost +=
-      order.rider_cost || 0;
-
-    weeklyMap[weekKey].net_profit +=
-      order.net_platform_profit || 0;
+  const dailyMap: any = {};
+  breakdown.forEach((o) => {
+    const day = o.created_at.split('T')[0];
+    if (!dailyMap[day]) dailyMap[day] = 0;
+    dailyMap[day] += o.gross_revenue || 0;
   });
 
-  const weeklyData = Object.values(weeklyMap).sort(
-    (a: any, b: any) =>
-      new Date(b.week).getTime() -
-      new Date(a.week).getTime()
-  );
+  const dailyValues = Object.values(dailyMap);
+  const avgDaily =
+    dailyValues.reduce((a: any, b: any) => a + b, 0) /
+    (dailyValues.length || 1);
 
-  // ================= RESTAURANT PROFITABILITY =================
+  const anomalies = Object.entries(dailyMap)
+    .filter(([_, value]: any) => value > avgDaily * 1.8 || value < avgDaily * 0.4)
+    .map(([day, value]) => ({ day, value }));
 
-  const restaurantMap: any = {};
+  /* ================= FORECAST ================= */
 
-  breakdown.forEach((order: any) => {
-    const name = order.restaurant_name;
+  const forecast = [];
+  const projectedDaily = avgDaily;
 
-    if (!restaurantMap[name]) {
-      restaurantMap[name] = {
-        restaurant: name,
-        orders: 0,
-        gross: 0,
-        commission: 0,
-        net_profit: 0,
-      };
-    }
-
-    restaurantMap[name].orders += 1;
-    restaurantMap[name].gross += order.gross_revenue || 0;
-    restaurantMap[name].commission +=
-      order.platform_commission || 0;
-    restaurantMap[name].net_profit +=
-      order.net_platform_profit || 0;
-  });
-
-  const restaurantData = Object.values(restaurantMap).sort(
-    (a: any, b: any) => b.net_profit - a.net_profit
-  );
-
-  // ================= RIDER PERFORMANCE =================
-
-  const riderMap: any = {};
-
-  breakdown.forEach((order: any) => {
-    const rider = order.rider_id || 'Unknown';
-
-    if (!riderMap[rider]) {
-      riderMap[rider] = {
-        rider,
-        deliveries: 0,
-        total_earned: 0,
-      };
-    }
-
-    riderMap[rider].deliveries += 1;
-    riderMap[rider].total_earned += order.rider_cost || 0;
-  });
-
-  const riderData = Object.values(riderMap)
-    .map((r: any) => ({
-      ...r,
-      avg_per_order:
-        r.deliveries > 0
-          ? (r.total_earned / r.deliveries).toFixed(2)
-          : 0,
-    }))
-    .sort((a: any, b: any) => b.total_earned - a.total_earned);
+  for (let i = 1; i <= 30; i++) {
+    forecast.push({
+      day: `+${i}`,
+      total_revenue: Math.round(projectedDaily),
+    });
+  }
 
   return (
     <DashboardUI
-      range={range}
-      overview={overviewRes.data}
-      dailyRevenue={dailyRes.data || []}
-      financialSummary={{
-        total_gross_revenue: totalGrossRevenue,
-        total_commission_revenue: totalCommissionRevenue,
-        total_restaurant_payout: totalRestaurantPayout,
-        total_rider_cost: totalRiderCost,
-        net_platform_profit: netPlatformProfit,
-        profit_margin_percent: profitMarginPercent,
+      totals={{
+        totalGross,
+        totalCommission,
+        totalRider,
+        totalRestaurant,
+        netProfit,
+        avgOrderValue,
+        contributionMargin,
       }}
-      weeklyData={weeklyData}
-      restaurantData={restaurantData}
-      riderData={riderData}
+      forecast={forecast}
+      anomalies={anomalies}
+      orderCount={breakdown.length}
     />
   );
 }
