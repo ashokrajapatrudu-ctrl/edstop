@@ -50,12 +50,12 @@ export default function DashboardUI({
   };
 
   return (
-    <div className="min-h-screen bg-slate-100 p-10 space-y-10">
+    <div className="min-h-screen bg-[#0f172a] text-gray-200 p-10 space-y-10">
 
       {/* HEADER */}
-      <div className="bg-gradient-to-r from-indigo-600 to-purple-600 text-white p-8 rounded-2xl shadow-xl">
+      <div className="bg-gradient-to-r from-indigo-600 to-purple-600 text-white p-8 rounded-2xl shadow-2xl">
         <h1 className="text-4xl font-bold tracking-tight">
-          Admin Financial Dashboard
+          Executive Financial Dashboard
         </h1>
         <p className="text-indigo-100 mt-2">
           Real-time marketplace intelligence
@@ -70,8 +70,8 @@ export default function DashboardUI({
             href={`/admin/dashboard?range=${r}`}
             className={`px-5 py-2 rounded-lg font-medium transition ${
               r === range
-                ? 'bg-indigo-600 text-white shadow-md'
-                : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
+                ? 'bg-indigo-600 text-white shadow-lg'
+                : 'bg-[#1e293b] text-gray-300 border border-gray-600 hover:bg-[#273449]'
             }`}
           >
             {r} Days
@@ -84,7 +84,11 @@ export default function DashboardUI({
         <KPI title="Total Revenue" value={`₹${overview?.total_revenue ?? 0}`} />
         <KPI title="Delivered Orders" value={overview?.total_delivered_orders ?? 0} />
         <KPI title="Cancelled Orders" value={overview?.total_cancelled_orders ?? 0} />
-        <KPI title="Profit Margin" value={`${financialSummary?.profit_margin_percent || 0}%`} />
+        <KPI
+          title="Profit Margin"
+          value={`${financialSummary?.profit_margin_percent || 0}%`}
+          highlight="text-indigo-400"
+        />
       </div>
 
       {/* FINANCIAL SUMMARY */}
@@ -99,8 +103,8 @@ export default function DashboardUI({
             value={`₹${Math.round(financialSummary?.net_platform_profit || 0)}`}
             highlight={
               financialSummary?.net_platform_profit > 0
-                ? 'text-green-600'
-                : 'text-red-600'
+                ? 'text-green-400'
+                : 'text-red-400'
             }
           />
         </div>
@@ -111,9 +115,9 @@ export default function DashboardUI({
         <div style={{ width: '100%', height: 320 }}>
           <ResponsiveContainer>
             <LineChart data={dailyRevenue}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="day" />
-              <YAxis />
+              <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
+              <XAxis dataKey="day" stroke="#94a3b8" />
+              <YAxis stroke="#94a3b8" />
               <Tooltip />
               <Line
                 type="monotone"
@@ -127,11 +131,11 @@ export default function DashboardUI({
       </Section>
 
       {/* WEEKLY SETTLEMENT */}
-      <Section title="Weekly Settlement Overview">
+      <Section title="Weekly Settlement">
         <div className="flex justify-end mb-4">
           <button
             onClick={downloadCSV}
-            className="bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-2 rounded-lg shadow-md"
+            className="bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-2 rounded-lg shadow-lg"
           >
             Download CSV
           </button>
@@ -183,9 +187,9 @@ export default function DashboardUI({
 
 function KPI({ title, value, highlight }: any) {
   return (
-    <div className="bg-white shadow-lg rounded-xl p-6 border border-gray-200">
-      <p className="text-gray-500 text-sm mb-2">{title}</p>
-      <p className={`text-2xl font-bold ${highlight || 'text-gray-900'}`}>
+    <div className="bg-[#1e293b] rounded-xl p-6 border border-gray-700 shadow-lg">
+      <p className="text-gray-400 text-sm mb-2">{title}</p>
+      <p className={`text-2xl font-bold ${highlight || 'text-white'}`}>
         {value}
       </p>
     </div>
@@ -194,8 +198,8 @@ function KPI({ title, value, highlight }: any) {
 
 function Section({ title, children }: any) {
   return (
-    <div className="bg-white shadow-xl rounded-2xl p-8 border border-gray-200">
-      <h2 className="text-2xl font-semibold mb-6 text-gray-800">
+    <div className="bg-[#1e293b] rounded-2xl p-8 border border-gray-700 shadow-2xl">
+      <h2 className="text-2xl font-semibold mb-6 text-white">
         {title}
       </h2>
       {children}
@@ -208,9 +212,9 @@ function DataTable({ headers, rows }: any) {
     <div className="overflow-x-auto">
       <table className="w-full text-left">
         <thead>
-          <tr className="border-b bg-gray-50">
+          <tr className="border-b border-gray-700 bg-[#0f172a]">
             {headers.map((h:any)=>
-              <th key={h} className="py-3 px-3 text-sm font-semibold text-gray-700">
+              <th key={h} className="py-3 px-3 text-sm font-semibold text-gray-400">
                 {h}
               </th>
             )}
@@ -218,9 +222,9 @@ function DataTable({ headers, rows }: any) {
         </thead>
         <tbody>
           {rows?.map((row:any,i:number)=>(
-            <tr key={i} className="border-b hover:bg-gray-50 transition">
+            <tr key={i} className="border-b border-gray-800 hover:bg-[#273449] transition">
               {row.map((cell:any,j:number)=>
-                <td key={j} className="py-3 px-3 text-gray-800 font-medium">
+                <td key={j} className="py-3 px-3 text-gray-200 font-medium">
                   {cell}
                 </td>
               )}
