@@ -17,6 +17,7 @@ export default function DashboardUI({
   dailyRevenue,
   financialSummary,
   weeklyData,
+  restaurantData,
 }: any) {
 
   const downloadCSV = () => {
@@ -76,54 +77,24 @@ export default function DashboardUI({
 
       {/* KPI Cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-        <Card
-          title="Total Revenue"
-          value={`₹${overview?.total_revenue ?? 0}`}
-        />
-        <Card
-          title="Delivered Orders"
-          value={overview?.total_delivered_orders ?? 0}
-        />
-        <Card
-          title="Cancelled Orders"
-          value={overview?.total_cancelled_orders ?? 0}
-        />
-        <Card
-          title="Profit Margin"
-          value={`${financialSummary?.profit_margin_percent || 0}%`}
-        />
+        <Card title="Total Revenue" value={`₹${overview?.total_revenue ?? 0}`} />
+        <Card title="Delivered Orders" value={overview?.total_delivered_orders ?? 0} />
+        <Card title="Cancelled Orders" value={overview?.total_cancelled_orders ?? 0} />
+        <Card title="Profit Margin" value={`${financialSummary?.profit_margin_percent || 0}%`} />
       </div>
 
       {/* Financial Summary */}
       <div className="grid grid-cols-2 md:grid-cols-3 gap-6">
-        <Card
-          title="Total Gross Revenue"
-          value={`₹${Math.round(financialSummary?.total_gross_revenue || 0)}`}
-        />
-        <Card
-          title="Commission Revenue"
-          value={`₹${Math.round(financialSummary?.total_commission_revenue || 0)}`}
-        />
-        <Card
-          title="Restaurant Payout"
-          value={`₹${Math.round(financialSummary?.total_restaurant_payout || 0)}`}
-        />
-        <Card
-          title="Rider Cost"
-          value={`₹${Math.round(financialSummary?.total_rider_cost || 0)}`}
-        />
-        <Card
-          title="Net Platform Profit"
-          value={`₹${Math.round(financialSummary?.net_platform_profit || 0)}`}
-        />
+        <Card title="Total Gross Revenue" value={`₹${Math.round(financialSummary?.total_gross_revenue || 0)}`} />
+        <Card title="Commission Revenue" value={`₹${Math.round(financialSummary?.total_commission_revenue || 0)}`} />
+        <Card title="Restaurant Payout" value={`₹${Math.round(financialSummary?.total_restaurant_payout || 0)}`} />
+        <Card title="Rider Cost" value={`₹${Math.round(financialSummary?.total_rider_cost || 0)}`} />
+        <Card title="Net Platform Profit" value={`₹${Math.round(financialSummary?.net_platform_profit || 0)}`} />
       </div>
 
       {/* Daily Revenue Chart */}
       <div className="bg-white shadow-lg rounded-xl p-6 border border-gray-200">
-        <h2 className="text-xl font-semibold mb-4">
-          Daily Revenue
-        </h2>
-
+        <h2 className="text-xl font-semibold mb-4">Daily Revenue</h2>
         <div style={{ width: '100%', height: 300 }}>
           <ResponsiveContainer>
             <LineChart data={dailyRevenue}>
@@ -131,25 +102,16 @@ export default function DashboardUI({
               <XAxis dataKey="day" />
               <YAxis />
               <Tooltip />
-              <Line
-                type="monotone"
-                dataKey="total_revenue"
-                stroke="#10b981"
-                strokeWidth={3}
-              />
+              <Line type="monotone" dataKey="total_revenue" stroke="#10b981" strokeWidth={3} />
             </LineChart>
           </ResponsiveContainer>
         </div>
       </div>
 
-      {/* Weekly Settlement Section */}
+      {/* Weekly Settlement */}
       <div className="bg-white shadow-lg rounded-xl p-6 border border-gray-200">
-
         <div className="flex justify-between items-center mb-4">
-          <h2 className="text-xl font-semibold">
-            Weekly Settlement Overview
-          </h2>
-
+          <h2 className="text-xl font-semibold">Weekly Settlement Overview</h2>
           <button
             onClick={downloadCSV}
             className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg"
@@ -167,39 +129,50 @@ export default function DashboardUI({
               <th className="py-2">Net Profit</th>
             </tr>
           </thead>
-
           <tbody>
             {weeklyData?.map((w: any) => (
               <tr key={w.week} className="border-b">
                 <td className="py-2">{w.week}</td>
-                <td className="py-2">
-                  ₹{Math.round(w.restaurant_payout)}
-                </td>
-                <td className="py-2">
-                  ₹{Math.round(w.rider_cost)}
-                </td>
-                <td
-                  className={`py-2 font-semibold ${
-                    w.net_profit > 0
-                      ? 'text-green-600'
-                      : 'text-red-600'
-                  }`}
-                >
+                <td className="py-2">₹{Math.round(w.restaurant_payout)}</td>
+                <td className="py-2">₹{Math.round(w.rider_cost)}</td>
+                <td className={`py-2 font-semibold ${w.net_profit > 0 ? 'text-green-600' : 'text-red-600'}`}>
                   ₹{Math.round(w.net_profit)}
                 </td>
               </tr>
             ))}
           </tbody>
         </table>
-
       </div>
 
-      <Link
-        href="/admin-promo-code-management"
-        className="inline-block bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-3 rounded-xl"
-      >
-        Promo Code Management
-      </Link>
+      {/* Restaurant Profitability */}
+      <div className="bg-white shadow-lg rounded-xl p-6 border border-gray-200">
+        <h2 className="text-xl font-semibold mb-4">Restaurant Profitability Breakdown</h2>
+
+        <table className="w-full text-left">
+          <thead>
+            <tr className="border-b">
+              <th className="py-2">Restaurant</th>
+              <th className="py-2">Orders</th>
+              <th className="py-2">Gross Revenue</th>
+              <th className="py-2">Commission</th>
+              <th className="py-2">Net Profit</th>
+            </tr>
+          </thead>
+          <tbody>
+            {restaurantData?.map((r: any) => (
+              <tr key={r.restaurant} className="border-b">
+                <td className="py-2">{r.restaurant}</td>
+                <td className="py-2">{r.orders}</td>
+                <td className="py-2">₹{Math.round(r.gross)}</td>
+                <td className="py-2">₹{Math.round(r.commission)}</td>
+                <td className={`py-2 font-semibold ${r.net_profit > 0 ? 'text-green-600' : 'text-red-600'}`}>
+                  ₹{Math.round(r.net_profit)}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
 
     </div>
   );

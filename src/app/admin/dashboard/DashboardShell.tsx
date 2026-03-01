@@ -32,7 +32,7 @@ export default async function DashboardShell({
 
   const breakdown = breakdownRes.data || [];
 
-  // ===== FINANCIAL SUMMARY CALCULATION =====
+  // ================= FINANCIAL SUMMARY =================
 
   const totalGrossRevenue = breakdown.reduce(
     (sum: number, o: any) => sum + (o.gross_revenue || 0),
@@ -66,7 +66,7 @@ export default async function DashboardShell({
         )
       : 0;
 
-  // ===== WEEKLY GROUPING =====
+  // ================= WEEKLY GROUPING =================
 
   const weeklyMap: any = {};
 
@@ -100,6 +100,35 @@ export default async function DashboardShell({
       new Date(a.week).getTime()
   );
 
+  // ================= RESTAURANT PROFITABILITY =================
+
+  const restaurantMap: any = {};
+
+  breakdown.forEach((order: any) => {
+    const name = order.restaurant_name;
+
+    if (!restaurantMap[name]) {
+      restaurantMap[name] = {
+        restaurant: name,
+        orders: 0,
+        gross: 0,
+        commission: 0,
+        net_profit: 0,
+      };
+    }
+
+    restaurantMap[name].orders += 1;
+    restaurantMap[name].gross += order.gross_revenue || 0;
+    restaurantMap[name].commission +=
+      order.platform_commission || 0;
+    restaurantMap[name].net_profit +=
+      order.net_platform_profit || 0;
+  });
+
+  const restaurantData = Object.values(restaurantMap).sort(
+    (a: any, b: any) => b.net_profit - a.net_profit
+  );
+
   return (
     <DashboardUI
       range={range}
@@ -114,6 +143,7 @@ export default async function DashboardShell({
         profit_margin_percent: profitMarginPercent,
       }}
       weeklyData={weeklyData}
+      restaurantData={restaurantData}
     />
   );
 }
