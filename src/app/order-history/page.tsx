@@ -14,7 +14,7 @@ import {
   ResponsiveContainer,
   CartesianGrid,
 } from 'recharts';
-
+const monthlySpendData: any[] = [];
 import { useState, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
@@ -451,7 +451,7 @@ export default function OrderHistoryPage() {
       <main className="relative z-10 container mx-auto px-4 py-6 max-w-4xl">
         {/* Analytics Section */}
 {/* Analytics Section */}
-{monthlySpendData.length > 0 ? (
+{typeof monthlySpendData !== "undefined" && monthlySpendData.length > 0 ? (
   <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6 animate-slide-up">
 
     {/* Line Chart */}
