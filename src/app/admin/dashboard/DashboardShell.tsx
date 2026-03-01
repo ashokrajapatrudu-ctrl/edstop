@@ -1,3 +1,5 @@
+// src/app/admin/dashboard/DashboardShell.tsx
+
 import { createClient } from '@/lib/supabase/server';
 import DashboardUI from './DashboardUI';
 
@@ -11,11 +13,7 @@ export default async function DashboardShell({
   const dateLimit = new Date();
   dateLimit.setDate(dateLimit.getDate() - range);
 
-  const [
-    overviewRes,
-    dailyRes,
-    financialBreakdownRes,
-  ] = await Promise.all([
+  const [overviewRes, dailyRes, breakdownRes] = await Promise.all([
     supabase
       .from('admin_platform_overview')
       .select('*')
@@ -32,37 +30,75 @@ export default async function DashboardShell({
       .gte('created_at', dateLimit.toISOString()),
   ]);
 
-  const breakdown = financialBreakdownRes.data || [];
+  const breakdown = breakdownRes.data || [];
+
+  // ===== FINANCIAL SUMMARY CALCULATION =====
 
   const totalGrossRevenue = breakdown.reduce(
-    (sum, o) => sum + (o.gross_revenue || 0),
+    (sum: number, o: any) => sum + (o.gross_revenue || 0),
     0
   );
 
   const totalCommissionRevenue = breakdown.reduce(
-    (sum, o) => sum + (o.platform_commission || 0),
+    (sum: number, o: any) => sum + (o.platform_commission || 0),
     0
   );
 
   const totalRestaurantPayout = breakdown.reduce(
-    (sum, o) => sum + (o.restaurant_payout || 0),
+    (sum: number, o: any) => sum + (o.restaurant_payout || 0),
     0
   );
 
   const totalRiderCost = breakdown.reduce(
-    (sum, o) => sum + (o.rider_cost || 0),
+    (sum: number, o: any) => sum + (o.rider_cost || 0),
     0
   );
 
   const netPlatformProfit = breakdown.reduce(
-    (sum, o) => sum + (o.net_platform_profit || 0),
+    (sum: number, o: any) => sum + (o.net_platform_profit || 0),
     0
   );
 
   const profitMarginPercent =
     totalGrossRevenue > 0
-      ? ((netPlatformProfit / totalGrossRevenue) * 100).toFixed(2)
+      ? Number(
+          ((netPlatformProfit / totalGrossRevenue) * 100).toFixed(2)
+        )
       : 0;
+
+  // ===== WEEKLY GROUPING =====
+
+  const weeklyMap: any = {};
+
+  breakdown.forEach((order: any) => {
+    const week = new Date(order.created_at);
+    week.setDate(week.getDate() - week.getDay());
+    const weekKey = week.toISOString().split('T')[0];
+
+    if (!weeklyMap[weekKey]) {
+      weeklyMap[weekKey] = {
+        week: weekKey,
+        restaurant_payout: 0,
+        rider_cost: 0,
+        net_profit: 0,
+      };
+    }
+
+    weeklyMap[weekKey].restaurant_payout +=
+      order.restaurant_payout || 0;
+
+    weeklyMap[weekKey].rider_cost +=
+      order.rider_cost || 0;
+
+    weeklyMap[weekKey].net_profit +=
+      order.net_platform_profit || 0;
+  });
+
+  const weeklyData = Object.values(weeklyMap).sort(
+    (a: any, b: any) =>
+      new Date(b.week).getTime() -
+      new Date(a.week).getTime()
+  );
 
   return (
     <DashboardUI
@@ -77,6 +113,7 @@ export default async function DashboardShell({
         net_platform_profit: netPlatformProfit,
         profit_margin_percent: profitMarginPercent,
       }}
+      weeklyData={weeklyData}
     />
   );
 }

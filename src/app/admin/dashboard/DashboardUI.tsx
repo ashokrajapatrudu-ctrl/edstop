@@ -16,6 +16,7 @@ export default function DashboardUI({
   overview,
   dailyRevenue,
   financialSummary,
+  weeklyData,
 }: any) {
   return (
     <div className="min-h-screen bg-gray-100 p-8 space-y-8">
@@ -38,11 +39,20 @@ export default function DashboardUI({
         ))}
       </div>
 
-      {/* KPI */}
+      {/* Primary KPIs */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-        <Card title="Total Revenue" value={`₹${overview?.total_revenue ?? 0}`} />
-        <Card title="Delivered Orders" value={overview?.total_delivered_orders ?? 0} />
-        <Card title="Cancelled Orders" value={overview?.total_cancelled_orders ?? 0} />
+        <Card
+          title="Total Revenue"
+          value={`₹${overview?.total_revenue ?? 0}`}
+        />
+        <Card
+          title="Delivered Orders"
+          value={overview?.total_delivered_orders ?? 0}
+        />
+        <Card
+          title="Cancelled Orders"
+          value={overview?.total_cancelled_orders ?? 0}
+        />
         <Card
           title="Profit Margin"
           value={`${financialSummary?.profit_margin_percent || 0}%`}
@@ -53,29 +63,41 @@ export default function DashboardUI({
       <div className="grid grid-cols-2 md:grid-cols-3 gap-6">
         <Card
           title="Total Gross Revenue"
-          value={`₹${Math.round(financialSummary?.total_gross_revenue || 0)}`}
+          value={`₹${Math.round(
+            financialSummary?.total_gross_revenue || 0
+          )}`}
         />
         <Card
           title="Commission Revenue"
-          value={`₹${Math.round(financialSummary?.total_commission_revenue || 0)}`}
+          value={`₹${Math.round(
+            financialSummary?.total_commission_revenue || 0
+          )}`}
         />
         <Card
           title="Restaurant Payout"
-          value={`₹${Math.round(financialSummary?.total_restaurant_payout || 0)}`}
+          value={`₹${Math.round(
+            financialSummary?.total_restaurant_payout || 0
+          )}`}
         />
         <Card
           title="Rider Cost"
-          value={`₹${Math.round(financialSummary?.total_rider_cost || 0)}`}
+          value={`₹${Math.round(
+            financialSummary?.total_rider_cost || 0
+          )}`}
         />
         <Card
           title="Net Platform Profit"
-          value={`₹${Math.round(financialSummary?.net_platform_profit || 0)}`}
+          value={`₹${Math.round(
+            financialSummary?.net_platform_profit || 0
+          )}`}
         />
       </div>
 
       {/* Daily Revenue Chart */}
       <div className="bg-white shadow-lg rounded-xl p-6 border border-gray-200">
-        <h2 className="text-xl font-semibold mb-4">Daily Revenue</h2>
+        <h2 className="text-xl font-semibold mb-4">
+          Daily Revenue
+        </h2>
         <div style={{ width: '100%', height: 300 }}>
           <ResponsiveContainer>
             <LineChart data={dailyRevenue}>
@@ -92,6 +114,46 @@ export default function DashboardUI({
             </LineChart>
           </ResponsiveContainer>
         </div>
+      </div>
+
+      {/* Weekly Settlement Table */}
+      <div className="bg-white shadow-lg rounded-xl p-6 border border-gray-200">
+        <h2 className="text-xl font-semibold mb-4">
+          Weekly Settlement Overview
+        </h2>
+
+        <table className="w-full text-left">
+          <thead>
+            <tr className="border-b">
+              <th className="py-2">Week</th>
+              <th className="py-2">Restaurant Payout</th>
+              <th className="py-2">Rider Cost</th>
+              <th className="py-2">Net Profit</th>
+            </tr>
+          </thead>
+          <tbody>
+            {weeklyData?.map((w: any) => (
+              <tr key={w.week} className="border-b">
+                <td className="py-2">{w.week}</td>
+                <td className="py-2">
+                  ₹{Math.round(w.restaurant_payout)}
+                </td>
+                <td className="py-2">
+                  ₹{Math.round(w.rider_cost)}
+                </td>
+                <td
+                  className={`py-2 font-semibold ${
+                    w.net_profit > 0
+                      ? 'text-green-600'
+                      : 'text-red-600'
+                  }`}
+                >
+                  ₹{Math.round(w.net_profit)}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
       </div>
 
       <Link
