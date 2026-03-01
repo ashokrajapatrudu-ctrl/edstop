@@ -18,8 +18,43 @@ export default function DashboardUI({
   financialSummary,
   weeklyData,
 }: any) {
+
+  const downloadCSV = () => {
+    if (!weeklyData || weeklyData.length === 0) return;
+
+    const headers = [
+      'Week',
+      'Restaurant Payout',
+      'Rider Cost',
+      'Net Profit',
+    ];
+
+    const rows = weeklyData.map((w: any) => [
+      w.week,
+      w.restaurant_payout,
+      w.rider_cost,
+      w.net_profit,
+    ]);
+
+    const csvContent =
+      [headers, ...rows]
+        .map((e) => e.join(','))
+        .join('\n');
+
+    const blob = new Blob([csvContent], {
+      type: 'text/csv;charset=utf-8;',
+    });
+
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `weekly_settlement_${range}d.csv`;
+    link.click();
+  };
+
   return (
     <div className="min-h-screen bg-gray-100 p-8 space-y-8">
+
       <h1 className="text-4xl font-bold">Admin Dashboard</h1>
 
       {/* Range Buttons */}
@@ -39,7 +74,7 @@ export default function DashboardUI({
         ))}
       </div>
 
-      {/* Primary KPIs */}
+      {/* KPI Cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
         <Card
           title="Total Revenue"
@@ -63,33 +98,23 @@ export default function DashboardUI({
       <div className="grid grid-cols-2 md:grid-cols-3 gap-6">
         <Card
           title="Total Gross Revenue"
-          value={`₹${Math.round(
-            financialSummary?.total_gross_revenue || 0
-          )}`}
+          value={`₹${Math.round(financialSummary?.total_gross_revenue || 0)}`}
         />
         <Card
           title="Commission Revenue"
-          value={`₹${Math.round(
-            financialSummary?.total_commission_revenue || 0
-          )}`}
+          value={`₹${Math.round(financialSummary?.total_commission_revenue || 0)}`}
         />
         <Card
           title="Restaurant Payout"
-          value={`₹${Math.round(
-            financialSummary?.total_restaurant_payout || 0
-          )}`}
+          value={`₹${Math.round(financialSummary?.total_restaurant_payout || 0)}`}
         />
         <Card
           title="Rider Cost"
-          value={`₹${Math.round(
-            financialSummary?.total_rider_cost || 0
-          )}`}
+          value={`₹${Math.round(financialSummary?.total_rider_cost || 0)}`}
         />
         <Card
           title="Net Platform Profit"
-          value={`₹${Math.round(
-            financialSummary?.net_platform_profit || 0
-          )}`}
+          value={`₹${Math.round(financialSummary?.net_platform_profit || 0)}`}
         />
       </div>
 
@@ -98,6 +123,7 @@ export default function DashboardUI({
         <h2 className="text-xl font-semibold mb-4">
           Daily Revenue
         </h2>
+
         <div style={{ width: '100%', height: 300 }}>
           <ResponsiveContainer>
             <LineChart data={dailyRevenue}>
@@ -116,11 +142,21 @@ export default function DashboardUI({
         </div>
       </div>
 
-      {/* Weekly Settlement Table */}
+      {/* Weekly Settlement Section */}
       <div className="bg-white shadow-lg rounded-xl p-6 border border-gray-200">
-        <h2 className="text-xl font-semibold mb-4">
-          Weekly Settlement Overview
-        </h2>
+
+        <div className="flex justify-between items-center mb-4">
+          <h2 className="text-xl font-semibold">
+            Weekly Settlement Overview
+          </h2>
+
+          <button
+            onClick={downloadCSV}
+            className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg"
+          >
+            Download CSV
+          </button>
+        </div>
 
         <table className="w-full text-left">
           <thead>
@@ -131,6 +167,7 @@ export default function DashboardUI({
               <th className="py-2">Net Profit</th>
             </tr>
           </thead>
+
           <tbody>
             {weeklyData?.map((w: any) => (
               <tr key={w.week} className="border-b">
@@ -154,6 +191,7 @@ export default function DashboardUI({
             ))}
           </tbody>
         </table>
+
       </div>
 
       <Link
@@ -162,6 +200,7 @@ export default function DashboardUI({
       >
         Promo Code Management
       </Link>
+
     </div>
   );
 }
