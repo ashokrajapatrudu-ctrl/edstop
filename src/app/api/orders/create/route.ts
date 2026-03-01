@@ -1,9 +1,39 @@
 import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { createServerClient } from "@supabase/ssr";
+import { cookies } from "next/headers";
 
 export async function POST(req: Request) {
   try {
-   const supabase = createAdminClient();
+    const supabaseAdmin = createAdminClient();
+
+    // 🔐 Get logged-in user from session (DO NOT trust frontend)
+    const supabaseAuth = createServerClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      {
+        cookies: {
+          getAll() {
+            return cookies().getAll();
+          },
+          setAll() {},
+        },
+      }
+    );
+
+    const {
+      data: { session },
+    } = await supabaseAuth.auth.getSession();
+
+    const userId = session?.user?.id;
+
+    if (!userId) {
+      return NextResponse.json(
+        { error: "Unauthorized" },
+        { status: 401 }
+      );
+    }
+
     const body = await req.json();
 
     const {
@@ -14,25 +44,32 @@ export async function POST(req: Request) {
       walletAmount = 0,
       promoCode = null,
       promoDiscount = 0,
-      userId,
     } = body;
 
-    if (!userId) {
-      return NextResponse.json({ error: "User ID missing" }, { status: 400 });
-    }
-
     if (!cartItems || cartItems.length === 0) {
-      return NextResponse.json({ error: "Cart is empty" }, { status: 400 });
+      return NextResponse.json(
+        { error: "Cart is empty" },
+        { status: 400 }
+      );
     }
 
-    // 🔎 Recalculate total on server
+    if (!restaurantId) {
+      return NextResponse.json(
+        { error: "Restaurant ID missing" },
+        { status: 400 }
+      );
+    }
+
+    // 🔎 Recalculate total safely
     const calculatedTotal = cartItems.reduce(
       (sum: number, item: any) =>
-        sum + Number(item.price) * Number(item.quantity),
+        sum +
+        Number(item.price || 0) * Number(item.quantity || 0),
       0
     );
 
-    if (calculatedTotal !== Number(totalAmount)) {
+    // Allow small floating difference
+    if (Math.abs(calculatedTotal - Number(totalAmount)) > 1) {
       return NextResponse.json(
         { error: "Order total mismatch" },
         { status: 400 }
@@ -48,9 +85,9 @@ export async function POST(req: Request) {
       );
     }
 
-    // 💰 Wallet Check
+    // 💰 Wallet validation
     if (walletAmount > 0) {
-      const { data: wallet } = await supabase
+      const { data: wallet } = await supabaseAdmin
         .from("wallets")
         .select("balance")
         .eq("user_id", userId)
@@ -65,7 +102,7 @@ export async function POST(req: Request) {
     }
 
     // 🧾 Create Order
-    const { data: order, error: orderError } = await supabase
+    const { data: order, error: orderError } = await supabaseAdmin
       .from("orders")
       .insert({
         user_id: userId,
@@ -84,7 +121,7 @@ export async function POST(req: Request) {
       throw new Error(orderError?.message || "Order creation failed");
     }
 
-    // 🛒 Insert Order Items
+    // 🛒 Insert order items
     const orderItems = cartItems.map((item: any) => ({
       order_id: order.id,
       menu_item_id: item.id,
@@ -93,7 +130,7 @@ export async function POST(req: Request) {
       price: item.price,
     }));
 
-    const { error: itemsError } = await supabase
+    const { error: itemsError } = await supabaseAdmin
       .from("order_items")
       .insert(orderItems);
 
@@ -101,12 +138,13 @@ export async function POST(req: Request) {
       throw new Error(itemsError.message);
     }
 
-    // 💳 Deduct Wallet
+    // 💳 Deduct wallet
     if (walletAmount > 0) {
-      const { error: walletError } = await supabase.rpc("deduct_wallet", {
-        user_id_input: userId,
-        amount_input: walletAmount,
-      });
+      const { error: walletError } =
+        await supabaseAdmin.rpc("deduct_wallet", {
+          user_id_input: userId,
+          amount_input: walletAmount,
+        });
 
       if (walletError) {
         throw new Error(walletError.message);
