@@ -12,33 +12,44 @@ import {
 import Link from 'next/link';
 
 export default function DashboardUI({
+  range,
   overview,
-  monthlyRevenue,
   dailyRevenue,
-  profitData,
-  financialSummary
+  financialSummary,
 }: any) {
   return (
     <div className="min-h-screen bg-gray-100 p-8 space-y-8">
       <h1 className="text-4xl font-bold">Admin Dashboard</h1>
 
-      {/* Primary KPI Cards */}
+      {/* Range Buttons */}
+      <div className="flex gap-3">
+        {[7, 30, 90].map((r) => (
+          <Link
+            key={r}
+            href={`/admin/dashboard?range=${r}`}
+            className={`px-4 py-2 rounded-lg ${
+              r === range
+                ? 'bg-indigo-600 text-white'
+                : 'bg-gray-200'
+            }`}
+          >
+            {r} Days
+          </Link>
+        ))}
+      </div>
+
+      {/* KPI */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
         <Card title="Total Revenue" value={`₹${overview?.total_revenue ?? 0}`} />
         <Card title="Delivered Orders" value={overview?.total_delivered_orders ?? 0} />
         <Card title="Cancelled Orders" value={overview?.total_cancelled_orders ?? 0} />
         <Card
-          title="Net Platform Profit"
-          value={`₹${
-            (profitData?.food_commission || 0) +
-            (profitData?.store_revenue || 0) -
-            (profitData?.rider_paid || 0) -
-            (profitData?.restaurant_paid || 0)
-          }`}
+          title="Profit Margin"
+          value={`${financialSummary?.profit_margin_percent || 0}%`}
         />
       </div>
 
-      {/* Financial Summary Section */}
+      {/* Financial Summary */}
       <div className="grid grid-cols-2 md:grid-cols-3 gap-6">
         <Card
           title="Total Gross Revenue"
@@ -49,7 +60,7 @@ export default function DashboardUI({
           value={`₹${Math.round(financialSummary?.total_commission_revenue || 0)}`}
         />
         <Card
-          title="Restaurant Payout Due"
+          title="Restaurant Payout"
           value={`₹${Math.round(financialSummary?.total_restaurant_payout || 0)}`}
         />
         <Card
@@ -57,30 +68,31 @@ export default function DashboardUI({
           value={`₹${Math.round(financialSummary?.total_rider_cost || 0)}`}
         />
         <Card
-          title="Net Platform Profit (Real)"
+          title="Net Platform Profit"
           value={`₹${Math.round(financialSummary?.net_platform_profit || 0)}`}
-        />
-        <Card
-          title="Profit Margin"
-          value={`${financialSummary?.profit_margin_percent || 0}%`}
         />
       </div>
 
-      <ChartCard
-        title="Monthly Revenue"
-        data={monthlyRevenue}
-        dataKey="total_revenue"
-        xKey="month"
-        color="#6366f1"
-      />
-
-      <ChartCard
-        title="Daily Revenue"
-        data={dailyRevenue}
-        dataKey="total_revenue"
-        xKey="day"
-        color="#10b981"
-      />
+      {/* Daily Revenue Chart */}
+      <div className="bg-white shadow-lg rounded-xl p-6 border border-gray-200">
+        <h2 className="text-xl font-semibold mb-4">Daily Revenue</h2>
+        <div style={{ width: '100%', height: 300 }}>
+          <ResponsiveContainer>
+            <LineChart data={dailyRevenue}>
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis dataKey="day" />
+              <YAxis />
+              <Tooltip />
+              <Line
+                type="monotone"
+                dataKey="total_revenue"
+                stroke="#10b981"
+                strokeWidth={3}
+              />
+            </LineChart>
+          </ResponsiveContainer>
+        </div>
+      </div>
 
       <Link
         href="/admin-promo-code-management"
@@ -97,25 +109,6 @@ function Card({ title, value }: any) {
     <div className="bg-white shadow-lg rounded-xl p-6 border border-gray-200">
       <p className="text-gray-500 text-sm">{title}</p>
       <p className="text-2xl font-bold">{value}</p>
-    </div>
-  );
-}
-
-function ChartCard({ title, data, dataKey, xKey, color }: any) {
-  return (
-    <div className="bg-white shadow-lg rounded-xl p-6 border border-gray-200">
-      <h2 className="text-xl font-semibold mb-4">{title}</h2>
-      <div style={{ width: '100%', height: 300 }}>
-        <ResponsiveContainer>
-          <LineChart data={data}>
-            <CartesianGrid strokeDasharray="3 3" />
-            <XAxis dataKey={xKey} />
-            <YAxis />
-            <Tooltip />
-            <Line type="monotone" dataKey={dataKey} stroke={color} strokeWidth={3} />
-          </LineChart>
-        </ResponsiveContainer>
-      </div>
     </div>
   );
 }

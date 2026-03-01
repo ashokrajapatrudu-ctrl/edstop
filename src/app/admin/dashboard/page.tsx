@@ -3,10 +3,16 @@ import DashboardShell from './DashboardShell';
 
 export const dynamic = 'force-dynamic';
 
-export default function AdminDashboardPage() {
+export default function AdminDashboardPage({
+  searchParams,
+}: {
+  searchParams: { range?: string };
+}) {
+  const range = Number(searchParams?.range || 30);
+
   return (
     <Suspense fallback={<div className="p-8">Loading Dashboard...</div>}>
-      <DashboardShell />
+      <DashboardShell range={range} />
     </Suspense>
   );
 }

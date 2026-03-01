@@ -8,7 +8,6 @@ export default function Loading() {
         ))}
       </div>
       <div className="h-80 bg-gray-300 rounded-xl" />
-      <div className="h-80 bg-gray-300 rounded-xl" />
     </div>
   );
 }
