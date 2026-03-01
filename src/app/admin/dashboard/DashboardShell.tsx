@@ -2,9 +2,9 @@
 
 import { createClient } from '@/lib/supabase/server';
 import DashboardUI from './DashboardUI';
-console.log(typeof supabase);
+
 export default async function DashboardShell() {
-  const supabase = createClient();
+  const supabase = await createClient();   // 👈 MUST AWAIT
 
   const [
     overviewRes,
@@ -13,11 +13,11 @@ export default async function DashboardShell() {
     profitRes,
     financialSummaryRes
   ] = await Promise.all([
-    supabase.from('admin_platform_overview').select('*').single(),
+    supabase.from('admin_platform_overview').select('*').maybeSingle(),
     supabase.from('admin_monthly_revenue').select('*'),
     supabase.from('admin_daily_revenue').select('*'),
-    supabase.from('admin_platform_profit').select('*').single(),
-    supabase.from('admin_financial_summary').select('*').single(),
+    supabase.from('admin_platform_profit').select('*').maybeSingle(),
+    supabase.from('admin_financial_summary').select('*').maybeSingle(),
   ]);
 
   return (
