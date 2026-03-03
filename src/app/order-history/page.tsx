@@ -1,21 +1,6 @@
 'use client';
-import { createClient } from '@/lib/supabase/client';
-import {
-  LineChart,
-  Line,
-  BarChart,
-  Bar,
-  PieChart,
-  Pie,
-  Cell,
-  XAxis,
-  YAxis,
-  Tooltip,
-  ResponsiveContainer,
-  CartesianGrid,
-} from 'recharts';
-const monthlySpendData: any[] = [];
-import { useState, useEffect, useMemo } from 'react';
+
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Icon from '@/components/ui/AppIcon';
@@ -229,37 +214,13 @@ export default function OrderHistoryPage() {
   const [sortBy, setSortBy] = useState<'newest' | 'oldest' | 'highest' | 'lowest'>('newest');
   const [reorderingIds, setReorderingIds] = useState<Set<string>>(new Set());
   const [isHydrated, setIsHydrated] = useState(false);
-  const [analytics, setAnalytics] = useState<any>(null); 
+
   const { liveOrders, isLive, isLoading: isRealtimeLoading, hasLiveData } = useOrderHistoryRealtime();
-
-
-  const orderTypeData = [
-  { name: 'Food', value: analytics?.food_orders ?? 0 },
-  { name: 'Dark Store', value: analytics?.store_orders ?? 0 },
-];
 
   useEffect(() => {
     setIsHydrated(true);
   }, []);
-  useEffect(() => {
-  const fetchAnalytics = async () => {
-    const supabase = createClient();
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
 
-    const { data, error } = await supabase
-      .from('user_order_analytics')
-      .select('*')
-      .eq('user_id', user.id)
-      .single();
-
-    if (!error) {
-      setAnalytics(data);
-    }
-  };
-
-  fetchAnalytics();
-}, []);
   // Merge live DB orders with mock orders — live data takes precedence
   useEffect(() => {
     if (hasLiveData && liveOrders.length > 0) {
@@ -325,10 +286,9 @@ export default function OrderHistoryPage() {
       return a.total - b.total;
     });
 
-
-
-
-
+  const totalSpent = orders.filter(o => o.status === 'delivered').reduce((sum, o) => sum + o.total, 0);
+  const totalCashback = orders.filter(o => o.status === 'delivered').reduce((sum, o) => sum + (o.cashbackEarned || 0), 0);
+  const deliveredCount = orders.filter(o => o.status === 'delivered').length;
 
   if (!isHydrated) {
     return (
@@ -449,197 +409,20 @@ export default function OrderHistoryPage() {
       </header>
 
       <main className="relative z-10 container mx-auto px-4 py-6 max-w-4xl">
-        {/* Analytics Section */}
-{/* Analytics Section */}
-{typeof monthlySpendData !== "undefined" && monthlySpendData.length > 0 ? (
-  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6 animate-slide-up">
-
-    {/* Line Chart */}
-    <div className="glass-card rounded-2xl p-4 border border-white/10">
-      <h2 className="text-white font-semibold mb-3">📈 Spend Trend</h2>
-      <div style={{ width: '100%', height: 250 }}>
-        <ResponsiveContainer>
-          <LineChart data={monthlySpendData}>
-            <CartesianGrid strokeDasharray="3 3" stroke="#ffffff10" />
-            <XAxis dataKey="month" stroke="#ffffff50" />
-            <YAxis stroke="#ffffff50" />
-            <Tooltip
-              contentStyle={{ backgroundColor: '#111', border: '1px solid #333' }}
-              labelStyle={{ color: '#aaa' }}
-            />
-            <Line
-              type="monotone"
-              dataKey="total"
-              stroke="#8b5cf6"
-              strokeWidth={3}
-              dot={{ r: 4 }}
-              activeDot={{ r: 6 }}
-            />
-          </LineChart>
-        </ResponsiveContainer>
-      </div>
-    </div>
-
-    {/* Bar Chart */}
-    <div className="glass-card rounded-2xl p-4 border border-white/10">
-      <h2 className="text-white font-semibold mb-3">📊 Monthly Spend</h2>
-      <div style={{ width: '100%', height: 250 }}>
-        <ResponsiveContainer>
-          <BarChart data={monthlySpendData}>
-            <CartesianGrid strokeDasharray="3 3" stroke="#ffffff10" />
-            <XAxis dataKey="month" stroke="#ffffff50" />
-            <YAxis stroke="#ffffff50" />
-            <Tooltip
-              contentStyle={{ backgroundColor: '#111', border: '1px solid #333' }}
-              labelStyle={{ color: '#aaa' }}
-            />
-            <Bar dataKey="total" fill="#6366f1" radius={[6, 6, 0, 0]} />
-          </BarChart>
-        </ResponsiveContainer>
-      </div>
-    </div>
-
-  </div>
-) : (
-  <div className="glass-card rounded-2xl p-6 border border-white/10 text-center text-white/40 mb-6">
-    No analytics yet — place your first order 🚀
-  </div>
-)}
-{/* Cashback vs Spend */}
-<div className="glass-card rounded-2xl p-5 border border-white/10 mb-6 animate-slide-up">
-  <h2 className="text-white font-semibold mb-4">🪙 Cashback vs Spend</h2>
-
-  <div style={{ width: '100%', height: 220 }}>
-    <ResponsiveContainer>
-      <BarChart
-        data={cashbackComparisonData}
-        layout="vertical"
-        margin={{ top: 10, right: 20, left: 40, bottom: 10 }}
-      >
-        <CartesianGrid strokeDasharray="3 3" stroke="#ffffff10" />
-        <XAxis type="number" stroke="#ffffff50" />
-        <YAxis type="category" dataKey="name" stroke="#ffffff50" />
-        <Tooltip
-          contentStyle={{ backgroundColor: '#111', border: '1px solid #333' }}
-          labelStyle={{ color: '#aaa' }}
-        />
-        <Bar dataKey="amount" fill="#22c55e" radius={[6, 6, 6, 6]} />
-      </BarChart>
-    </ResponsiveContainer>
-  </div>
-</div>
-{/* Weekly Spend Trend */}
-<div className="glass-card rounded-2xl p-4 border border-white/10 mb-6 animate-slide-up">
-  <h2 className="text-white font-semibold mb-3">📅 Last 7 Days Spend</h2>
-  <div style={{ width: '100%', height: 220 }}>
-    <ResponsiveContainer>
-      <LineChart data={weeklySpendData}>
-        <CartesianGrid strokeDasharray="3 3" stroke="#ffffff10" />
-        <XAxis
-          dataKey="date"
-          stroke="#ffffff50"
-          tickFormatter={(value) =>
-            new Date(value).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })
-          }
-        />
-        <YAxis stroke="#ffffff50" />
-        <Tooltip />
-        <Line
-          type="monotone"
-          dataKey="total"
-          stroke="#22c55e"
-          strokeWidth={3}
-          dot={{ r: 4 }}
-        />
-      </LineChart>
-    </ResponsiveContainer>
-  </div>
-</div>
-{/* Smart AI Insights */}
-<div className="glass-card rounded-2xl p-5 border border-purple-500/20 mb-6 animate-slide-up">
-  <h2 className="text-white font-semibold mb-4">🧠 Smart Insights</h2>
-
-  {insights.length === 0 ? (
-    <p className="text-white/40 text-sm">
-      Start ordering to unlock personalized insights.
-    </p>
-  ) : (
-    <div className="space-y-3">
-      {insights.map((insight, index) => (
-        <div
-          key={index}
-          className="px-4 py-3 bg-purple-500/10 border border-purple-500/20 rounded-xl text-sm text-purple-200"
-        >
-          {insight}
-        </div>
-      ))}
-    </div>
-  )}
-</div>
-{/* Order Type Distribution */}
-<div className="glass-card rounded-2xl p-5 border border-white/10 mb-6 animate-slide-up">
-  <h2 className="text-white font-semibold mb-4">📦 Order Distribution</h2>
-
-  <div style={{ width: '100%', height: 250 }}>
-    <ResponsiveContainer>
-      <PieChart>
-        <Pie
-          data={orderTypeData}
-          dataKey="value"
-          nameKey="name"
-          cx="50%"
-          cy="50%"
-          outerRadius={80}
-          label
-        >
-          <Cell fill="#f97316" />
-          <Cell fill="#3b82f6" />
-        </Pie>
-        <Tooltip
-          contentStyle={{ backgroundColor: '#111', border: '1px solid #333' }}
-          labelStyle={{ color: '#aaa' }}
-        />
-      </PieChart>
-    </ResponsiveContainer>
-  </div>
-
-  <div className="flex justify-center gap-6 mt-4 text-sm">
-    <div className="flex items-center gap-2 text-orange-400">
-      <span className="w-3 h-3 bg-orange-500 rounded-full"></span>
-      Food: {analytics?.food_orders ?? 0}
-    </div>
-    <div className="flex items-center gap-2 text-blue-400">
-      <span className="w-3 h-3 bg-blue-500 rounded-full"></span>
-      Dark Store: {analytics?.store_orders ?? 0}
-    </div>
-  </div>
-</div>
         {/* Summary Stats */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6 animate-slide-up">
+        <div className="grid grid-cols-3 gap-3 mb-6 animate-slide-up">
           <div className="glass-card rounded-2xl p-4 border border-white/10 text-center">
-            {analytics?.delivered_orders ?? 0}
+            <p className="text-2xl font-bold text-white">{deliveredCount}</p>
             <p className="text-xs text-white/50 mt-1">Orders Delivered</p>
           </div>
           <div className="glass-card rounded-2xl p-4 border border-white/10 text-center">
-            <p className="text-2xl font-bold text-white">₹₹{analytics?.total_spent?.toFixed(0) ?? 0}</p>
+            <p className="text-2xl font-bold text-white">₹{totalSpent.toFixed(0)}</p>
             <p className="text-xs text-white/50 mt-1">Total Spent</p>
           </div>
           <div className="glass-card rounded-2xl p-4 border border-emerald-500/20 text-center">
             <p className="text-2xl font-bold text-emerald-400">₹{totalCashback.toFixed(2)}</p>
             <p className="text-xs text-white/50 mt-1">EdCoins Earned</p>
           </div>
-          <div className="glass-card rounded-2xl p-4 border border-indigo-500/20 text-center">
-  <p className="text-2xl font-bold text-indigo-400">
-    {analytics?.avg_delivery_time_minutes
-  ? `${Math.round(analytics.avg_delivery_time_minutes)} min`
-  : '--'}
-  </p>
-  <p className="text-xs text-white/50 mt-1">
-   {analytics?.avg_delivery_time_minutes
-  ? `${Math.round(analytics.avg_delivery_time_minutes)} min`
-  : '--'}
-  </p>
-</div>
         </div>
 
         {/* Search & Filters */}

@@ -1,8 +1,8 @@
-import { createServerClient } from '@supabase/ssr'
-import { NextResponse, type NextRequest } from 'next/server'
+import { createServerClient } from '@supabase/ssr';
+import { NextResponse, type NextRequest } from 'next/server';
 
 export async function middleware(request: NextRequest) {
-  const response = NextResponse.next()
+  let supabaseResponse = NextResponse.next({ request });
 
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -10,26 +10,30 @@ export async function middleware(request: NextRequest) {
     {
       cookies: {
         getAll() {
-          return request.cookies.getAll()
+          return request.cookies.getAll();
         },
         setAll(cookiesToSet) {
           cookiesToSet.forEach(({ name, value, options }) => {
-            response.cookies.set(name, value, options)
-          })
+            request.cookies.set(name, value);
+            supabaseResponse.cookies.set(name, value, options);
+          });
         },
       },
     }
-  )
+  );
 
-  // 🔐 Get session (recommended in middleware)
   const {
-    data: { session },
-  } = await supabase.auth.getSession()
+    data: { user },
+  } = await supabase.auth.getUser();
 
-  const user = session?.user ?? null
-  const pathname = request.nextUrl.pathname
+  // Redirect authenticated users away from login page
+  if (user && request.nextUrl.pathname === '/login') {
+    const url = request.nextUrl.clone();
+    url.pathname = '/dashboard';
+    return NextResponse.redirect(url);
+  }
 
-  // 🔒 Define protected route prefixes
+  // Protected routes that require authentication
   const protectedRoutes = [
     '/dashboard',
     '/food',
@@ -38,72 +42,68 @@ export async function middleware(request: NextRequest) {
     '/ai',
     '/rider',
     '/admin',
-    '/vendor',
-  ]
+  ];
 
-  const isProtected = protectedRoutes.some(route =>
-    pathname.startsWith(route)
-  )
+  const isProtectedRoute = protectedRoutes.some((route) =>
+    request.nextUrl.pathname.startsWith(route)
+  );
 
-  // 🚫 If not logged in and accessing protected route
-  if (!user && isProtected) {
-    return NextResponse.redirect(new URL('/login', request.url))
+  // Redirect unauthenticated users to login
+  if (!user && isProtectedRoute) {
+    const url = request.nextUrl.clone();
+    url.pathname = '/login';
+    return NextResponse.redirect(url);
   }
 
-  let role: string | null = null
-
-  // 🔍 Fetch role only if logged in
-  if (user) {
-    const { data: profile, error } = await supabase
+  // Role-based access control
+  if (user && isProtectedRoute) {
+    // Get user role from database
+    const { data: userProfile } = await supabase
       .from('user_profiles')
       .select('role')
       .eq('id', user.id)
-      .single()
+      .single();
 
-    if (!error) {
-      role = profile?.role ?? null
+    const userRole = userProfile?.role || 'student';
+    const pathname = request.nextUrl.pathname;
+
+    // Student-only routes
+    const studentRoutes = ['/dashboard', '/food', '/store', '/wallet', '/ai'];
+    const isStudentRoute = studentRoutes.some((route) =>
+      pathname.startsWith(route)
+    );
+
+    // Rider-only routes
+    const isRiderRoute = pathname.startsWith('/rider');
+
+    // Admin-only routes
+    const isAdminRoute = pathname.startsWith('/admin');
+
+    // Check role permissions
+    if (isStudentRoute && userRole !== 'student') {
+      const url = request.nextUrl.clone();
+      url.pathname = '/';
+      return NextResponse.redirect(url);
+    }
+
+    if (isRiderRoute && userRole !== 'rider') {
+      const url = request.nextUrl.clone();
+      url.pathname = '/';
+      return NextResponse.redirect(url);
+    }
+
+    if (isAdminRoute && userRole !== 'admin') {
+      const url = request.nextUrl.clone();
+      url.pathname = '/';
+      return NextResponse.redirect(url);
     }
   }
 
-  // 🛑 Admin route protection
-  if (pathname.startsWith('/admin')) {
-    if (role !== 'admin') {
-      return NextResponse.redirect(new URL('/', request.url))
-    }
-  }
-
-  // 🛑 Vendor route protection
-  if (pathname.startsWith('/vendor')) {
-    if (role !== 'vendor') {
-      return NextResponse.redirect(new URL('/', request.url))
-    }
-  }
-
-  // 🛑 Rider route protection (if applicable)
-  if (pathname.startsWith('/rider')) {
-    if (role !== 'rider') {
-      return NextResponse.redirect(new URL('/', request.url))
-    }
-  }
-
-  // 🔄 Prevent logged-in users from accessing login page
-  if (user && pathname === '/login') {
-    return NextResponse.redirect(new URL('/student-dashboard', request.url))
-  }
-
-  return response
+  return supabaseResponse;
 }
 
-// 🎯 Only run middleware on protected routes
 export const config = {
   matcher: [
-    '/dashboard/:path*',
-    '/food/:path*',
-    '/store/:path*',
-    '/wallet/:path*',
-    '/ai/:path*',
-    '/rider/:path*',
-    '/admin/:path*',
-    '/vendor/:path*',
+    '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
   ],
-}
+};
